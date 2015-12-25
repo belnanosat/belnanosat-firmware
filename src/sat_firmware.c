@@ -65,6 +65,18 @@ static void gpio_setup(void)
 	                GPIO11 | GPIO12 | GPIO13 | GPIO14 | GPIO15);
 }
 
+static void getline(char* buf, int maxlen) {
+	int curlen = 0;
+	while (curlen < maxlen) {
+		buf[curlen] = getchar();
+		if (buf[curlen] == '\r') {
+			buf[curlen] = 0;
+			break;
+		}
+		++curlen;
+	}
+}
+
 int main(void)
 {
 	clock_setup();
@@ -76,10 +88,19 @@ int main(void)
 	gpio_set(GPIOD, GPIO12 | GPIO14);
 
 	/* Blink the LEDs (PD12, PD13, PD14 and PD15) on the board. */
+	char buffer[128];
+	char *ptr = buffer;
+	printf("stm32-user@satellite $ ");
+	fflush(stdout);
 	while (1) {
+		int id;
+		size_t n;
 		gpio_toggle(GPIOD, GPIO12);
-		printf("Hello from stm32!\n");
-		msleep(1000);
+//		scanf("%s", buffer);
+		getline(buffer, 128);
+		printf("\n\rstm32-user@satellite $ ");
+		fflush(stdout);
+//		msleep(1000);
 	}
 
 	return 0;

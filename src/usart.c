@@ -21,13 +21,14 @@
 
 #include <errno.h>
 #include <unistd.h>
+#include <stdio.h>
 
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/gpio.h>
 #include <libopencm3/stm32/usart.h>
 
 extern int _write(int file, char *ptr, int len);
-
+extern int _read(int file, char *buf, int len);
 /*
  * USART1 pins:
  * RX - PA10, TX - PA9 - works only if you remove PA9-VBUS jumper!
@@ -44,16 +45,19 @@ void usart_setup(void)
 	rcc_periph_clock_enable(USART_RCC_ID);
 
 	/* Setup GPIO pins for USART transmit. */
+	gpio_mode_setup(USART_PORT, GPIO_MODE_AF, GPIO_PUPD_NONE, USART_RX);
 	gpio_mode_setup(USART_PORT, GPIO_MODE_AF, GPIO_PUPD_NONE, USART_TX);
+//	gpio_set_output_options(USART_PORT, GPIO_OTYPE_OD, GPIO_OSPEED_25MHZ, USART_TX);
 
 	/* Setup USART TX pin as alternate function. */
+	gpio_set_af(USART_PORT, GPIO_AF7, USART_RX);
 	gpio_set_af(USART_PORT, GPIO_AF7, USART_TX);
 
 	/* Setup USART parameters. */
 	usart_set_baudrate(USART_ID, USART_BAUD_RATE);
 	usart_set_databits(USART_ID, 8);
 	usart_set_stopbits(USART_ID, USART_STOPBITS_1);
-	usart_set_mode(USART_ID, USART_MODE_TX);
+	usart_set_mode(USART_ID, USART_MODE_TX_RX);
 	usart_set_parity(USART_ID, USART_PARITY_NONE);
 	usart_set_flow_control(USART_ID, USART_FLOWCONTROL_NONE);
 
@@ -84,4 +88,19 @@ int _write(int file, char *ptr, int len)
 	}
 	errno = EIO;
 	return -1;
+}
+
+int _read(int file, char *buf, int len)
+{
+	if (STDIN_FILENO == file) {
+		buf[0] = usart_recv_blocking(USART_ID);
+#ifdef USART_AUTO_ECHO
+		putchar(buf[0]);
+		fflush(stdout);
+#endif
+		return 1;
+	} else {
+		errno = EBADF;
+		return -1;
+	}
 }

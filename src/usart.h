@@ -25,8 +25,10 @@
 #define USART_PORT GPIOB
 #define USART_RCC_PORT RCC_GPIOB
 #define USART_TX GPIO10
-#define USART_RX GPIO9
+#define USART_RX GPIO11
 #define USART_BAUD_RATE 38400
+
+#define USART_AUTO_ECHO
 
 extern void usart_setup(void);
 
