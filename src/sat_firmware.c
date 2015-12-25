@@ -17,26 +17,16 @@
  * along with belnanosat.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <errno.h>
 #include <stdio.h>
-#include <unistd.h>
 
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/gpio.h>
-#include <libopencm3/stm32/usart.h>
 #include <libopencm3/cm3/nvic.h>
 #include <libopencm3/cm3/systick.h>
 
-#define USART_ID USART3
-#define USART_RCC_ID RCC_USART3
-#define USART_PORT GPIOB
-#define USART_RCC_PORT RCC_GPIOB
-#define USART_TX GPIO10
-#define USART_RX GPIO9
+#include "usart.h"
 
 volatile uint32_t system_millis;
-
-int _write(int file, char *ptr, int len);
 
 void sys_tick_handler(void)
 {
@@ -65,33 +55,7 @@ static void clock_setup(void)
 {
 	rcc_clock_setup_hse_3v3(&rcc_hse_8mhz_3v3[RCC_CLOCK_3V3_168MHZ]);
 
-	rcc_periph_clock_enable(USART_RCC_PORT);
 	rcc_periph_clock_enable(RCC_GPIOD);
-
-	rcc_periph_clock_enable(USART_RCC_ID);
-}
-
-
-/*
- * USART1 pins:
- * RX - PA10, TX - PA9 - works only if you remove PA9-VBUS jumper!
- * USART2 pins:
- * RX - PA1, TX - PA2 - works!
- * USART3 pins:
- * RX - PB11, TX - PB10 - works!
- */
-static void usart_setup(void)
-{
-	/* Setup USART parameters. */
-	usart_set_baudrate(USART_ID, 38400);
-	usart_set_databits(USART_ID, 8);
-	usart_set_stopbits(USART_ID, USART_STOPBITS_1);
-	usart_set_mode(USART_ID, USART_MODE_TX);
-	usart_set_parity(USART_ID, USART_PARITY_NONE);
-	usart_set_flow_control(USART_ID, USART_FLOWCONTROL_NONE);
-
-	/* Finally enable the USART. */
-	usart_enable(USART_ID);
 }
 
 static void gpio_setup(void)
@@ -99,37 +63,6 @@ static void gpio_setup(void)
 	/* Set GPIO11-15 (in GPIO port D) to 'output push-pull'. */
 	gpio_mode_setup(GPIOD, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE,
 	                GPIO11 | GPIO12 | GPIO13 | GPIO14 | GPIO15);
-
-	/* Setup GPIO pins for USART transmit. */
-	gpio_mode_setup(USART_PORT, GPIO_MODE_AF, GPIO_PUPD_NONE, USART_TX);
-
-	/* Setup USART TX pin as alternate function. */
-	gpio_set_af(USART_PORT, GPIO_AF7, USART_TX);
-}
-
-/**
- * Use USART_ID as a console.
- * This is a syscall for newlib
- * @param file
- * @param ptr
- * @param len
- * @return
- */
-int _write(int file, char *ptr, int len)
-{
-	int i;
-
-	if (file == STDOUT_FILENO || file == STDERR_FILENO) {
-		for (i = 0; i < len; i++) {
-			if (ptr[i] == '\n') {
-				usart_send_blocking(USART_ID, '\r');
-			}
-			usart_send_blocking(USART_ID, ptr[i]);
-		}
-		return i;
-	}
-	errno = EIO;
-	return -1;
 }
 
 int main(void)
