@@ -1,0 +1,8 @@
+# Temporary files #
+###################
+*.o
+*.d
+*.map
+# Binary files    #
+###################
+*.elf
