@@ -44,7 +44,7 @@ void i2c_setup(void) {
 	i2c_peripheral_enable(I2C2);
 }
 
-uint16_t i2c_read(uint32_t i2c, uint8_t device_address) {
+static uint16_t i2c_read(uint32_t i2c, uint8_t device_address) {
 	/* int bytes_to_read = 1; */
 	/* uint16_t res = 0; */
     /* i2c_send_start(I2C1); */
@@ -63,7 +63,7 @@ uint16_t i2c_read(uint32_t i2c, uint8_t device_address) {
 	uint32_t reg32 __attribute__((unused));
 	uint16_t temperature;
 
-	volatile int a, id;
+//	volatile int a, id;
 //	for (a = 0; a <= 0x7F; ++a) {
 	/* 	while ((I2C_SR2(i2c) & I2C_SR2_BUSY)); */
 	/* 	/\* Send START condition. *\/ */
@@ -155,4 +155,98 @@ uint16_t i2c_read(uint32_t i2c, uint8_t device_address) {
 	I2C_CR1(i2c) &= ~I2C_CR1_POS;
 
 	return temperature;
+}
+
+void i2c_write_byte(uint32_t i2c, uint8_t device_address, uint8_t reg_address, uint8_t value) {
+	uint32_t reg32 __attribute__((unused));
+
+	i2c_send_start(i2c);
+	while (!((I2C_SR1(i2c) & I2C_SR1_SB)
+		& (I2C_SR2(i2c) & (I2C_SR2_MSL | I2C_SR2_BUSY))));
+
+	i2c_send_7bit_address(i2c, device_address, I2C_WRITE);
+	while (!(I2C_SR1(i2c) & I2C_SR1_ADDR));
+
+	reg32 = I2C_SR2(i2c);
+	i2c_send_data(i2c, reg_address);
+	while (!(I2C_SR1(i2c) & (I2C_SR1_BTF | I2C_SR1_TxE)));
+
+	i2c_send_data(i2c, value);
+	while (!(I2C_SR1(i2c) & (I2C_SR1_BTF | I2C_SR1_TxE)));
+
+	i2c_send_stop(i2c);
+}
+
+uint8_t i2c_read_byte(uint32_t i2c, uint8_t device_address, uint8_t reg_address) {
+	uint32_t reg32 __attribute__((unused));
+	volatile uint8_t res;
+
+	i2c_send_start(i2c);
+	while (!((I2C_SR1(i2c) & I2C_SR1_SB)
+		& (I2C_SR2(i2c) & (I2C_SR2_MSL | I2C_SR2_BUSY))));
+
+	i2c_send_7bit_address(i2c, device_address, I2C_WRITE);
+	while (!(I2C_SR1(i2c) & I2C_SR1_ADDR));
+
+	reg32 = I2C_SR2(i2c);
+	i2c_send_data(i2c, reg_address);
+	while (!(I2C_SR1(i2c) & (I2C_SR1_BTF | I2C_SR1_TxE)));
+
+	i2c_send_start(i2c);
+	while (!((I2C_SR1(i2c) & I2C_SR1_SB)
+		& (I2C_SR2(i2c) & (I2C_SR2_MSL | I2C_SR2_BUSY))));
+
+	i2c_send_7bit_address(i2c, device_address, I2C_READ);
+	while (!(I2C_SR1(i2c) & I2C_SR1_ADDR));
+
+	reg32 = I2C_SR2(i2c);
+
+	while (!(I2C_SR1(i2c) & I2C_SR1_RxNE));
+	I2C_CR1(i2c) &= ~I2C_CR1_ACK;
+	// Why does it hang? According to the datasheet BTF is set iff (RxNE & DR isn't read)
+//	while (!(I2C_SR1(i2c) & I2C_SR1_BTF));
+	i2c_send_stop(i2c);
+	res = I2C_DR(i2c);
+
+	return res;
+}
+
+uint16_t i2c_read_word(uint32_t i2c, uint8_t device_address, uint8_t reg_address) {
+	uint32_t reg32 __attribute__((unused));
+	uint16_t res;
+
+	i2c_send_start(i2c);
+	while (!((I2C_SR1(i2c) & I2C_SR1_SB)
+		& (I2C_SR2(i2c) & (I2C_SR2_MSL | I2C_SR2_BUSY))));
+
+
+	i2c_send_7bit_address(i2c, device_address, I2C_WRITE);
+	while (!(I2C_SR1(i2c) & I2C_SR1_ADDR));
+
+	reg32 = I2C_SR2(i2c);
+	i2c_send_data(i2c, reg_address);
+	while (!(I2C_SR1(i2c) & (I2C_SR1_BTF | I2C_SR1_TxE)));
+
+	i2c_send_start(i2c);
+	while (!((I2C_SR1(i2c) & I2C_SR1_SB)
+		& (I2C_SR2(i2c) & (I2C_SR2_MSL | I2C_SR2_BUSY))));
+
+	i2c_send_7bit_address(i2c, device_address, I2C_READ);
+
+	/* 2-byte receive is a special case. See datasheet POS bit. */
+	I2C_CR1(i2c) |= (I2C_CR1_POS | I2C_CR1_ACK);
+	while (!(I2C_SR1(i2c) & I2C_SR1_ADDR));
+
+	reg32 = I2C_SR2(i2c);
+	I2C_CR1(i2c) &= ~I2C_CR1_ACK;
+	while (!(I2C_SR1(i2c) & I2C_SR1_BTF));
+	res = (uint16_t)(I2C_DR(i2c) << 8); /* MSB */
+
+	I2C_CR1(i2c) |= I2C_CR1_STOP;
+
+	res |= I2C_DR(i2c); /* LSB */
+
+	I2C_CR1(i2c) &= ~I2C_CR1_POS;
+
+	return res;
 }

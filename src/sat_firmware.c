@@ -88,6 +88,7 @@ int main(void)
 	usart_setup();
 //	adc_setup();
 	i2c_setup();
+	BMP180_setup();
 	msleep(1000);
 //	printf("Frequence: %d\n", rcc_apb1_frequency);
 
@@ -104,12 +105,16 @@ int main(void)
 		int id;
 		size_t n;
 		uint16_t val;
+		volatile float test = 4.54656f;
 		gpio_toggle(GPIOD, GPIO12);
 //		scanf("%s", buffer);
 //		getline(buffer, 128);
-		val = i2c_read(I2C2, BMP180_ADDR);
+		// Start temperature measurement
+		i2c_write_byte(I2C2, BMP180_ADDR, 0xF4, 0x2E);
+		msleep(30);
+		val = i2c_read_word(I2C2, BMP180_ADDR, 0xF6);
 //		val = adc_read();
-		printf("\n\r%d: stm32-user@satellite $ %d\r\n", ++packet_id, (int)val);
+		printf("\n\r%d: stm32-user@satellite $ %d %d %f\r\n", ++packet_id, (int)val, (int)		i2c_read_byte(I2C2, BMP180_ADDR, 0xAA + 0x01), test);
 		/* val = i2c_read(); */
 		/* printf("ok! %d\n", (int)val); */
 		fflush(stdout);
