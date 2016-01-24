@@ -28,19 +28,8 @@
 #include "usart.h"
 #include "adc.h"
 #include "i2c.h"
-
-volatile uint32_t system_millis;
-
-void sys_tick_handler(void)
-{
-	system_millis++;
-}
-
-static void msleep(uint32_t delay)
-{
-	uint32_t wake = system_millis + delay;
-	while (wake > system_millis);
-}
+#include "bmp180.h"
+#include "utils.h"
 
 /* Set up a timer to create 1mS ticks. */
 static void systick_setup(void)
@@ -82,13 +71,14 @@ static void getline(char* buf, int maxlen) {
 
 int main(void)
 {
+	BMP180 bmp180_sensor;
 	clock_setup();
 	gpio_setup();
 	systick_setup();
 	usart_setup();
 //	adc_setup();
 	i2c_setup();
-	BMP180_setup();
+	BMP180_setup(&bmp180_sensor, I2C2);
 	msleep(1000);
 //	printf("Frequence: %d\n", rcc_apb1_frequency);
 
@@ -105,16 +95,13 @@ int main(void)
 		int id;
 		size_t n;
 		uint16_t val;
-		volatile float test = 4.54656f;
+		volatile float temp;
 		gpio_toggle(GPIOD, GPIO12);
 //		scanf("%s", buffer);
 //		getline(buffer, 128);
-		// Start temperature measurement
-		i2c_write_byte(I2C2, BMP180_ADDR, 0xF4, 0x2E);
-		msleep(30);
-		val = i2c_read_word(I2C2, BMP180_ADDR, 0xF6);
 //		val = adc_read();
-		printf("\n\r%d: stm32-user@satellite $ %d %d %f\r\n", ++packet_id, (int)val, (int)		i2c_read_byte(I2C2, BMP180_ADDR, 0xAA + 0x01), test);
+		temp = BMP180_read_temperature(&bmp180_sensor);
+		printf("\n\r%d: stm32-user@satellite $ %f\r\n", ++packet_id, temp);
 		/* val = i2c_read(); */
 		/* printf("ok! %d\n", (int)val); */
 		fflush(stdout);
