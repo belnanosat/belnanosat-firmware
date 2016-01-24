@@ -21,10 +21,13 @@
 
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/gpio.h>
+#include <libopencm3/stm32/i2c.h>
 #include <libopencm3/cm3/nvic.h>
 #include <libopencm3/cm3/systick.h>
 
 #include "usart.h"
+#include "adc.h"
+#include "i2c.h"
 
 volatile uint32_t system_millis;
 
@@ -83,6 +86,10 @@ int main(void)
 	gpio_setup();
 	systick_setup();
 	usart_setup();
+//	adc_setup();
+	i2c_setup();
+	msleep(1000);
+//	printf("Frequence: %d\n", rcc_apb1_frequency);
 
 	/* Set two LEDs for wigwag effect when toggling. */
 	gpio_set(GPIOD, GPIO12 | GPIO14);
@@ -92,15 +99,21 @@ int main(void)
 	char *ptr = buffer;
 	printf("stm32-user@satellite $ ");
 	fflush(stdout);
+	int packet_id = 0;
 	while (1) {
 		int id;
 		size_t n;
+		uint16_t val;
 		gpio_toggle(GPIOD, GPIO12);
 //		scanf("%s", buffer);
-		getline(buffer, 128);
-		printf("\n\rstm32-user@satellite $ ");
+//		getline(buffer, 128);
+		val = i2c_read(I2C2, BMP180_ADDR);
+//		val = adc_read();
+		printf("\n\r%d: stm32-user@satellite $ %d\r\n", ++packet_id, (int)val);
+		/* val = i2c_read(); */
+		/* printf("ok! %d\n", (int)val); */
 		fflush(stdout);
-//		msleep(1000);
+		msleep(1000);
 	}
 
 	return 0;
