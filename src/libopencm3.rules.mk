@@ -49,7 +49,8 @@ STYLECHECKFILES	:= $(shell find . -name '*.[ch]')
 
 LDSCRIPT	?= $(BINARY).ld
 
-OBJS		+= $(BINARY).o
+# We don't want file with int main() have the same name as the final .elf
+#OBJS		+= $(BINARY).o
 
 
 ifeq ($(strip $(OPENCM3_DIR)),)
