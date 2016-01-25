@@ -1,3 +1,22 @@
+/*
+ * This file is part of belnanosat project.
+ *
+ * Copyright (C) 2016 Uladzislau Paulovich <selatnick@gmail.com>
+ *
+ * belnanosat is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * belnanosat is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with belnanosat.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "bmp180.h"
 
 #include <assert.h>
@@ -48,7 +67,7 @@ void BMP180_finish_conv(BMP180 *sensor) {
 
 	sensor->pressure = finish_pressure_conv(sensor);
 	sensor->altitude = 44330 * (1 - powf(
-	    (sensor->pressure / (float)101325), 0.1903f));
+	    (sensor->pressure / BMP180_MSLP), 0.1903f));
 }
 
 int32_t read_temperature(BMP180 *sensor) {
