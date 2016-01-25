@@ -96,7 +96,7 @@ CXXFLAGS	+= -fno-common -ffunction-sections -fdata-sections
 
 CPPFLAGS	+= -MD
 CPPFLAGS	+= -Wall -Wundef
-CPPFLAGS	+= -I$(INCLUDE_DIR) $(DEFS)
+CPPFLAGS	+= -I$(INCLUDE_DIR) $(DEFS) -I../nanopb/
 
 ###############################################################################
 # Linker flags
@@ -159,7 +159,7 @@ $(LDSCRIPT):
 	@#printf "  OBJDUMP $(*).list\n"
 	$(Q)$(OBJDUMP) -S $(*).elf > $(*).list
 
-%.elf %.map: $(OBJS) $(LDSCRIPT) $(LIB_DIR)/lib$(LIBNAME).a
+%.elf %.map: $(PROTOBUFFERS) $(OBJS) $(LDSCRIPT) $(LIB_DIR)/lib$(LIBNAME).a
 	@#printf "  LD      $(*).elf\n"
 	$(Q)$(LD) $(LDFLAGS) $(ARCH_FLAGS) $(OBJS) $(LDLIBS) -o $(*).elf
 
@@ -174,6 +174,11 @@ $(LDSCRIPT):
 %.o: %.cpp
 	@#printf "  CXX     $(*).cpp\n"
 	$(Q)$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(ARCH_FLAGS) -o $(*).o -c $(*).cpp
+
+%.pb: proto/%.proto
+	@#printf "  PROTOC     $(*).proto\n"
+	@cd proto; protoc -o$(*).pb $(*).proto
+	@cd proto; python ../../nanopb/generator/nanopb_generator.py $(*).pb
 
 clean:
 	@#printf "  CLEAN\n"

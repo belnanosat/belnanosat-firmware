@@ -79,9 +79,6 @@ int _write(int file, char *ptr, int len)
 
 	if (file == STDOUT_FILENO || file == STDERR_FILENO) {
 		for (i = 0; i < len; i++) {
-			if (ptr[i] == '\n') {
-				usart_send_blocking(USART_ID, '\r');
-			}
 			usart_send_blocking(USART_ID, ptr[i]);
 		}
 		return i;

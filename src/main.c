@@ -25,7 +25,9 @@
 #include <libopencm3/cm3/nvic.h>
 #include <libopencm3/cm3/systick.h>
 
-#include <math.h>
+#include <pb_encode.h>
+
+#include "proto/telemetry.pb.h"
 
 #include "usart.h"
 #include "adc.h"
@@ -92,25 +94,51 @@ int main(void)
 	gpio_set(GPIOD, GPIO12 | GPIO14);
 
 	/* Blink the LEDs (PD12, PD13, PD14 and PD15) on the board. */
-	char buffer[128];
-	char *ptr = buffer;
+	uint8_t buffer[128];
+//	char *ptr = buffer;
 	int packet_id = 0;
+
+	TelemetryPacket packet = TelemetryPacket_init_zero;
 	while (1) {
-		int id;
-		size_t n;
+		int i;
+		uint8_t checksum;
 		uint16_t val;
 		int32_t pressure;
 		volatile float temp;
 		gpio_toggle(GPIOD, GPIO12);
-//		scanf("%s", buffer);
-//		getline(buffer, 128);
-//		val = adc_read();
 		BMP180_start_conv(&bmp180_sensor);
 		BMP180_finish_conv(&bmp180_sensor);
 
-		printf("\n\r%d: stm32-user@satellite $ %d %d %f", ++packet_id,
-		       (int)bmp180_sensor.temperature, (int)bmp180_sensor.pressure,
-		       bmp180_sensor.altitude);
+
+		for (i = 0; i < TelemetryPacket_size + 2; ++i) {
+			buffer[i] = 0;
+		}
+		packet.packet_id = packet_id;
+		packet.status = 0xFFFFFFFF;
+		packet.altitude = bmp180_sensor.altitude;
+		packet.pressure = bmp180_sensor.pressure;
+		packet.bmp180_temperature = bmp180_sensor.temperature;
+
+
+		pb_ostream_t stream = pb_ostream_from_buffer(buffer + 1, sizeof(buffer) - 1);
+		bool status = pb_encode(&stream, TelemetryPacket_fields, &packet);
+		buffer[0] = stream.bytes_written;
+//		printf("\n\r%d", stream.bytes_written);
+		checksum = 0;
+		for (i = 0; i <= stream.bytes_written; ++i) {
+			checksum ^= buffer[i];
+		}
+		buffer[stream.bytes_written + 1] = checksum;
+
+		for (i = 0; i < TelemetryPacket_size + 2; ++i) {
+			putc(buffer[i], stdout);
+		}
+
+		/* printf("\n\r%d: stm32-user@satellite $ %d %d %d %d %f", ++packet_id, */
+		/*        (int)status, */
+		/*        (int)stream.bytes_written, */
+		/*        (int)bmp180_sensor.temperature, (int)bmp180_sensor.pressure, */
+		/*        bmp180_sensor.altitude); */
 		/* val = i2c_read(); */
 		/* printf("ok! %d\n", (int)val); */
 		fflush(stdout);
