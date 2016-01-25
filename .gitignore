@@ -3,6 +3,7 @@
 *.o
 *.d
 *.map
+*.pb*
 # Binary files    #
 ###################
 *.elf
