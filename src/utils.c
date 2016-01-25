@@ -12,3 +12,7 @@ void msleep(uint32_t delay)
 	uint32_t wake = system_millis + delay;
 	while (wake > system_millis);
 }
+
+uint32_t get_time_ms(void) {
+	return system_millis;
+}

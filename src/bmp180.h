@@ -28,29 +28,24 @@
 #define BMP180_READ_TEMPERATURE        0x2E
 #define BMP180_READ_PRESSURE           0x34
 #define MSLP                    101325  // Mean Sea Level Pressure = 1013.25 hPA
-#define LOCAL_ADS_ALTITUDE      2500    //mm     altitude of your position now
-#define PRESSURE_OFFSET         0       //Pa    Offset
 
 #include <stdint.h>
 
 typedef struct
 {
-	uint8_t num;
-	int32_t buf[8];
-} BMP180_AvgTypeDef;
-
-typedef struct
-{
-	int16_t AC1, AC2, AC3, B1, B2, MB, MC, MD, _oss;
+	int16_t AC1, AC2, AC3, B1, B2, MB, MC, MD;
 	uint16_t AC4, AC5, AC6;
 	int32_t B5, UT, UP, Pressure0;
-	BMP180_AvgTypeDef BMP180_Filter[3];
 	uint32_t i2c;
+	uint32_t conv_start_time;
+	uint8_t oss;
 
-	int32_t pressure, temperature, altitude;
+	int32_t pressure, temperature;
+	float altitude;
 } BMP180;
 
-extern void BMP180_setup(BMP180 *sensor, uint32_t i2c);
-extern float BMP180_read_temperature(BMP180 *sensor);
+extern void BMP180_setup(BMP180 *sensor, uint32_t i2c, uint8_t oss);
+extern void BMP180_start_conv(BMP180 *sensor);
+extern void BMP180_finish_conv(BMP180 *sensor);
 
 #endif

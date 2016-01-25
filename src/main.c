@@ -25,6 +25,8 @@
 #include <libopencm3/cm3/nvic.h>
 #include <libopencm3/cm3/systick.h>
 
+#include <math.h>
+
 #include "usart.h"
 #include "adc.h"
 #include "i2c.h"
@@ -78,7 +80,11 @@ int main(void)
 	usart_setup();
 //	adc_setup();
 	i2c_setup();
-	BMP180_setup(&bmp180_sensor, I2C2);
+
+	// Wait for initialization of all external sensors
+	msleep(100);
+
+	BMP180_setup(&bmp180_sensor, I2C2, BMP180_MODE_ULTRA_HIGHRES);
 	msleep(1000);
 //	printf("Frequence: %d\n", rcc_apb1_frequency);
 
@@ -88,20 +94,23 @@ int main(void)
 	/* Blink the LEDs (PD12, PD13, PD14 and PD15) on the board. */
 	char buffer[128];
 	char *ptr = buffer;
-	printf("stm32-user@satellite $ ");
-	fflush(stdout);
 	int packet_id = 0;
 	while (1) {
 		int id;
 		size_t n;
 		uint16_t val;
+		int32_t pressure;
 		volatile float temp;
 		gpio_toggle(GPIOD, GPIO12);
 //		scanf("%s", buffer);
 //		getline(buffer, 128);
 //		val = adc_read();
-		temp = BMP180_read_temperature(&bmp180_sensor);
-		printf("\n\r%d: stm32-user@satellite $ %f\r\n", ++packet_id, temp);
+		BMP180_start_conv(&bmp180_sensor);
+		BMP180_finish_conv(&bmp180_sensor);
+
+		printf("\n\r%d: stm32-user@satellite $ %d %d %f", ++packet_id,
+		       (int)bmp180_sensor.temperature, (int)bmp180_sensor.pressure,
+		       bmp180_sensor.altitude);
 		/* val = i2c_read(); */
 		/* printf("ok! %d\n", (int)val); */
 		fflush(stdout);
