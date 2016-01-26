@@ -73,13 +73,13 @@ void BMP180_finish_conv(BMP180 *sensor) {
 int32_t read_temperature(BMP180 *sensor) {
 	// TODO: sometimes return INVALID_DATA (like in an official API)
 	// Start temperature measurement
-	i2c_write_byte(sensor->i2c, BMP180_ADDR, BMP180_CONTROL,
+	i2c_write_byte(sensor->i2c, BMP180_ADDRESS, BMP180_CONTROL,
 	               BMP180_READ_TEMPERATURE);
 
 	// Datasheet states that maximum conversion time is 4.5ms (Table 1)
 	msleep(5);
 
-	int32_t UT = i2c_read_word(sensor->i2c, BMP180_ADDR, BMP180_CONTROL_OUTPUT);
+	int32_t UT = i2c_read_word(sensor->i2c, BMP180_ADDRESS, BMP180_CONTROL_OUTPUT);
 
 	int32_t X1 = (UT - (int32_t)sensor->AC6) * (int32_t)sensor->AC5;
 	X1 >>= 15;
@@ -90,14 +90,14 @@ int32_t read_temperature(BMP180 *sensor) {
 }
 
 void start_pressure_conv(BMP180 *sensor) {
-	i2c_write_byte(sensor->i2c, BMP180_ADDR, BMP180_CONTROL,
+	i2c_write_byte(sensor->i2c, BMP180_ADDRESS, BMP180_CONTROL,
 	               BMP180_READ_PRESSURE + (sensor->oss << 6));
 }
 
 int32_t finish_pressure_conv(BMP180 *sensor) {
-	int32_t UP = i2c_read_word(sensor->i2c, BMP180_ADDR, BMP180_CONTROL_OUTPUT);
+	int32_t UP = i2c_read_word(sensor->i2c, BMP180_ADDRESS, BMP180_CONTROL_OUTPUT);
 	UP <<= 8;
-	UP |= i2c_read_byte(sensor->i2c, BMP180_ADDR, BMP180_CONTROL_OUTPUT + 2);
+	UP |= i2c_read_byte(sensor->i2c, BMP180_ADDRESS, BMP180_CONTROL_OUTPUT + 2);
 	UP >>= 8 - sensor->oss;
 
 	int32_t X1, X2, X3, B3, B6, P, Temp, pressure;

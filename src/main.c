@@ -34,6 +34,9 @@
 #include "i2c.h"
 #include "bmp180.h"
 #include "utils.h"
+#include "eeprom.h"
+
+//#define LOG_TO_EEPROM
 
 /* Set up a timer to create 1mS ticks. */
 static void systick_setup(void)
@@ -76,6 +79,7 @@ static void getline(char* buf, int maxlen) {
 int main(void)
 {
 	BMP180 bmp180_sensor;
+	EEPROM eeprom;
 	clock_setup();
 	gpio_setup();
 	systick_setup();
@@ -87,6 +91,7 @@ int main(void)
 	msleep(100);
 
 	BMP180_setup(&bmp180_sensor, I2C2, BMP180_MODE_ULTRA_HIGHRES);
+	EEPROM_setup(&eeprom, I2C2);
 	msleep(1000);
 //	printf("Frequence: %d\n", rcc_apb1_frequency);
 
@@ -102,9 +107,6 @@ int main(void)
 	while (1) {
 		int i;
 		uint8_t checksum;
-		uint16_t val;
-		int32_t pressure;
-		volatile float temp;
 		gpio_toggle(GPIOD, GPIO12);
 		BMP180_start_conv(&bmp180_sensor);
 		BMP180_finish_conv(&bmp180_sensor);
@@ -122,6 +124,11 @@ int main(void)
 
 		pb_ostream_t stream = pb_ostream_from_buffer(buffer + 1, sizeof(buffer) - 1);
 		bool status = pb_encode(&stream, TelemetryPacket_fields, &packet);
+
+#ifdef LOG_TO_EEPROM
+		EEPROM_write(&eeprom, buffer, stream.bytes_written);
+#endif
+
 		buffer[0] = stream.bytes_written;
 //		printf("\n\r%d", stream.bytes_written);
 		checksum = 0;

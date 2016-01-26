@@ -3,12 +3,20 @@
 
 #include <stdint.h>
 
-#define BMP180_ADDR                 0x77//0xEE
-#define READ_TEMPERATURE            0xAA//0x2E
-
 void i2c_setup(void);
-void i2c_write_byte(uint32_t i2c, uint8_t device_address, uint8_t reg_address, uint8_t value);
+void i2c_write_byte(uint32_t i2c, uint8_t device_address,
+                    uint8_t reg_address, uint8_t value);
 uint8_t i2c_read_byte(uint32_t i2c, uint8_t device_address, uint8_t reg_address);
 uint16_t i2c_read_word(uint32_t i2c, uint8_t device_address, uint8_t reg_address);
+
+// These funcitons are used for EEPROM access and require 2-byte register address
+// NOTE: we assume that buf_length > 2
+void i2c_read_sequence(uint32_t i2c, uint8_t device_address,
+                       uint16_t reg_address, uint8_t *buffer, int buf_length);
+void i2c_write_sequence(uint32_t i2c, uint8_t device_address,
+                        uint16_t reg_address, uint8_t *buffer, int buf_length);
+// For reading from registers with 2 bytes addresses
+uint8_t i2c_wread_byte(uint32_t i2c, uint8_t device_address,
+                       uint16_t reg_address);
 
 #endif

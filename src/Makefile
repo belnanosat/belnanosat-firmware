@@ -7,6 +7,7 @@ OBJS += usart.o
 OBJS += adc.o
 OBJS += i2c.o
 OBJS += bmp180.o
+OBJS += eeprom.o
 OBJS += main.o
 OBJS += utils.o
 OBJS += proto/telemetry.pb.o

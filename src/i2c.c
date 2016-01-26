@@ -12,12 +12,15 @@
  * SDA - PB7, SCL - PB6
  * I2C2 pins:
  * SDA - PB11, SCL - PB10
+ * I2C3 pins:
+ * SDA - PC9, SCL - PA8
  */
 void i2c_setup(void) {
 	rcc_periph_clock_enable(RCC_GPIOB);
 
 	gpio_mode_setup(GPIOB, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO10 | GPIO11);
-	gpio_set_output_options(GPIOB, GPIO_OTYPE_OD, GPIO_OSPEED_50MHZ, GPIO10 | GPIO11);
+	gpio_set_output_options(GPIOB, GPIO_OTYPE_OD, GPIO_OSPEED_50MHZ,
+	                        GPIO10 | GPIO11);
 	gpio_set_af(GPIOB, GPIO_AF4, GPIO10 | GPIO11);
 
 	rcc_periph_clock_enable(RCC_I2C2);
@@ -35,12 +38,13 @@ void i2c_setup(void) {
 	i2c_peripheral_enable(I2C2);
 }
 
-void i2c_write_byte(uint32_t i2c, uint8_t device_address, uint8_t reg_address, uint8_t value) {
+void i2c_write_byte(uint32_t i2c, uint8_t device_address,
+                    uint8_t reg_address, uint8_t value) {
 	uint32_t reg32 __attribute__((unused));
 
 	i2c_send_start(i2c);
 	while (!((I2C_SR1(i2c) & I2C_SR1_SB)
-		& (I2C_SR2(i2c) & (I2C_SR2_MSL | I2C_SR2_BUSY))));
+	         & (I2C_SR2(i2c) & (I2C_SR2_MSL | I2C_SR2_BUSY))));
 
 	i2c_send_7bit_address(i2c, device_address, I2C_WRITE);
 	while (!(I2C_SR1(i2c) & I2C_SR1_ADDR));
@@ -61,7 +65,7 @@ uint8_t i2c_read_byte(uint32_t i2c, uint8_t device_address, uint8_t reg_address)
 
 	i2c_send_start(i2c);
 	while (!((I2C_SR1(i2c) & I2C_SR1_SB)
-		& (I2C_SR2(i2c) & (I2C_SR2_MSL | I2C_SR2_BUSY))));
+	         & (I2C_SR2(i2c) & (I2C_SR2_MSL | I2C_SR2_BUSY))));
 
 	i2c_send_7bit_address(i2c, device_address, I2C_WRITE);
 	while (!(I2C_SR1(i2c) & I2C_SR1_ADDR));
@@ -72,7 +76,7 @@ uint8_t i2c_read_byte(uint32_t i2c, uint8_t device_address, uint8_t reg_address)
 
 	i2c_send_start(i2c);
 	while (!((I2C_SR1(i2c) & I2C_SR1_SB)
-		& (I2C_SR2(i2c) & (I2C_SR2_MSL | I2C_SR2_BUSY))));
+	         & (I2C_SR2(i2c) & (I2C_SR2_MSL | I2C_SR2_BUSY))));
 
 	i2c_send_7bit_address(i2c, device_address, I2C_READ);
 	while (!(I2C_SR1(i2c) & I2C_SR1_ADDR));
@@ -81,7 +85,8 @@ uint8_t i2c_read_byte(uint32_t i2c, uint8_t device_address, uint8_t reg_address)
 
 	while (!(I2C_SR1(i2c) & I2C_SR1_RxNE));
 	I2C_CR1(i2c) &= ~I2C_CR1_ACK;
-	// Why does it hang? According to the datasheet BTF is set iff (RxNE & DR isn't read)
+	// Why does it hang? According to the datasheet BTF is set
+	// iff (RxNE & DR isn't read)
 //	while (!(I2C_SR1(i2c) & I2C_SR1_BTF));
 	i2c_send_stop(i2c);
 	res = I2C_DR(i2c);
@@ -89,13 +94,14 @@ uint8_t i2c_read_byte(uint32_t i2c, uint8_t device_address, uint8_t reg_address)
 	return res;
 }
 
-uint16_t i2c_read_word(uint32_t i2c, uint8_t device_address, uint8_t reg_address) {
+uint16_t i2c_read_word(uint32_t i2c, uint8_t device_address,
+                       uint8_t reg_address) {
 	uint32_t reg32 __attribute__((unused));
 	uint16_t res;
 
 	i2c_send_start(i2c);
 	while (!((I2C_SR1(i2c) & I2C_SR1_SB)
-		& (I2C_SR2(i2c) & (I2C_SR2_MSL | I2C_SR2_BUSY))));
+	         & (I2C_SR2(i2c) & (I2C_SR2_MSL | I2C_SR2_BUSY))));
 
 
 	i2c_send_7bit_address(i2c, device_address, I2C_WRITE);
@@ -107,7 +113,7 @@ uint16_t i2c_read_word(uint32_t i2c, uint8_t device_address, uint8_t reg_address
 
 	i2c_send_start(i2c);
 	while (!((I2C_SR1(i2c) & I2C_SR1_SB)
-		& (I2C_SR2(i2c) & (I2C_SR2_MSL | I2C_SR2_BUSY))));
+	         & (I2C_SR2(i2c) & (I2C_SR2_MSL | I2C_SR2_BUSY))));
 
 	i2c_send_7bit_address(i2c, device_address, I2C_READ);
 
@@ -125,6 +131,117 @@ uint16_t i2c_read_word(uint32_t i2c, uint8_t device_address, uint8_t reg_address
 	res |= I2C_DR(i2c); /* LSB */
 
 	I2C_CR1(i2c) &= ~I2C_CR1_POS;
+
+	return res;
+}
+
+void i2c_read_sequence(uint32_t i2c, uint8_t device_address,
+                       uint16_t reg_address, uint8_t *buffer, int buf_length) {
+	uint32_t reg32 __attribute__((unused));
+	int i;
+
+	i2c_send_start(i2c);
+	while (!((I2C_SR1(i2c) & I2C_SR1_SB)
+	         & (I2C_SR2(i2c) & (I2C_SR2_MSL | I2C_SR2_BUSY))));
+
+
+	i2c_send_7bit_address(i2c, device_address, I2C_WRITE);
+	while (!(I2C_SR1(i2c) & I2C_SR1_ADDR));
+
+	reg32 = I2C_SR2(i2c);
+	// Send MSB
+	i2c_send_data(i2c, (reg_address & 0xFF00) >> 8);
+	while (!(I2C_SR1(i2c) & (I2C_SR1_BTF | I2C_SR1_TxE)));
+	// Send LSB
+	i2c_send_data(i2c, reg_address & 0xFF);
+	while (!(I2C_SR1(i2c) & (I2C_SR1_BTF | I2C_SR1_TxE)));
+
+	i2c_send_start(i2c);
+	while (!((I2C_SR1(i2c) & I2C_SR1_SB)
+	         & (I2C_SR2(i2c) & (I2C_SR2_MSL | I2C_SR2_BUSY))));
+
+	i2c_send_7bit_address(i2c, device_address, I2C_READ);
+	I2C_CR1(i2c) |= I2C_CR1_ACK;
+	while (!(I2C_SR1(i2c) & I2C_SR1_ADDR));
+	reg32 = I2C_SR2(i2c);
+
+	for (i = 0; i + 3 < buf_length; ++i) {
+		while (!(I2C_SR1(i2c) & I2C_SR1_BTF));
+		buffer[i] = I2C_DR(i2c);
+	}
+
+	while (!(I2C_SR1(i2c) & I2C_SR1_BTF));
+	I2C_CR1(i2c) &= ~I2C_CR1_ACK;
+	buffer[buf_length - 3] = I2C_DR(i2c);
+	while (!(I2C_SR1(i2c) & I2C_SR1_BTF));
+	I2C_CR1(i2c) |= I2C_CR1_STOP;
+	buffer[buf_length - 2] = I2C_DR(i2c);
+	buffer[buf_length - 1] = I2C_DR(i2c);
+}
+
+void i2c_write_sequence(uint32_t i2c, uint8_t device_address,
+                        uint16_t reg_address, uint8_t *buffer, int buf_length) {
+	uint32_t reg32 __attribute__((unused));
+	int i;
+
+	i2c_send_start(i2c);
+	while (!((I2C_SR1(i2c) & I2C_SR1_SB)
+	         & (I2C_SR2(i2c) & (I2C_SR2_MSL | I2C_SR2_BUSY))));
+
+	i2c_send_7bit_address(i2c, device_address, I2C_WRITE);
+	while (!(I2C_SR1(i2c) & I2C_SR1_ADDR));
+
+	reg32 = I2C_SR2(i2c);
+
+	// Send MSB of the register address
+	i2c_send_data(i2c, (reg_address & 0xFF00) >> 8);
+	while (!(I2C_SR1(i2c) & (I2C_SR1_BTF | I2C_SR1_TxE)));
+	// Send LSB of the register address
+	i2c_send_data(i2c, reg_address & 0xFF);
+	while (!(I2C_SR1(i2c) & (I2C_SR1_BTF | I2C_SR1_TxE)));
+
+	for (i = 0; i < buf_length; ++i) {
+		i2c_send_data(i2c, buffer[i]);
+		while (!(I2C_SR1(i2c) & (I2C_SR1_BTF | I2C_SR1_TxE)));
+	}
+
+	i2c_send_stop(i2c);
+}
+
+uint8_t i2c_wread_byte(uint32_t i2c, uint8_t device_address,
+                       uint16_t reg_address) {
+		uint32_t reg32 __attribute__((unused));
+	volatile uint8_t res;
+
+	i2c_send_start(i2c);
+	while (!((I2C_SR1(i2c) & I2C_SR1_SB)
+	         & (I2C_SR2(i2c) & (I2C_SR2_MSL | I2C_SR2_BUSY))));
+
+	i2c_send_7bit_address(i2c, device_address, I2C_WRITE);
+	while (!(I2C_SR1(i2c) & I2C_SR1_ADDR));
+
+	reg32 = I2C_SR2(i2c);
+
+	// Send MSB of the register address
+	i2c_send_data(i2c, (reg_address & 0xFF00) >> 8);
+	while (!(I2C_SR1(i2c) & (I2C_SR1_BTF | I2C_SR1_TxE)));
+	// Send LSB of the register address
+	i2c_send_data(i2c, reg_address & 0xFF);
+	while (!(I2C_SR1(i2c) & (I2C_SR1_BTF | I2C_SR1_TxE)));
+
+	i2c_send_start(i2c);
+	while (!((I2C_SR1(i2c) & I2C_SR1_SB)
+	         & (I2C_SR2(i2c) & (I2C_SR2_MSL | I2C_SR2_BUSY))));
+
+	i2c_send_7bit_address(i2c, device_address, I2C_READ);
+	while (!(I2C_SR1(i2c) & I2C_SR1_ADDR));
+
+	reg32 = I2C_SR2(i2c);
+
+	while (!(I2C_SR1(i2c) & I2C_SR1_RxNE));
+	I2C_CR1(i2c) &= ~I2C_CR1_ACK;
+	i2c_send_stop(i2c);
+	res = I2C_DR(i2c);
 
 	return res;
 }
