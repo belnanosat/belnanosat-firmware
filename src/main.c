@@ -1,7 +1,7 @@
 /*
  * This file is part of belnanosat project.
  *
- * Copyright (C) 2015 Uladzislau Paulovich <selatnick@gmail.com>
+ * Copyright (C) 2016 Uladzislau Paulovich <selatnick@gmail.com>
  *
  * belnanosat is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -36,6 +36,7 @@
 #include "utils.h"
 #include "eeprom.h"
 #include "ds18b20.h"
+#include "smbus.h"
 
 //#define LOG_TO_EEPROM
 
@@ -88,6 +89,7 @@ int main(void)
 	usart_setup();
 //	adc_setup();
 	i2c_setup();
+	smbus_setup();
 
 	// Wait for initialization of all external sensors
 	msleep(100);
@@ -105,6 +107,8 @@ int main(void)
 	int packet_id = 0;
 
 	volatile uint8_t devices_num = ds18b20_setup(&ds18b20, GPIOE, GPIO3);
+
+//	volatile uint16_t temp = smbus_read_word(0, 0x06);
 
 	TelemetryPacket packet = TelemetryPacket_init_zero;
 	while (1) {

@@ -12,6 +12,7 @@ OBJS += main.o
 OBJS += utils.o
 OBJS += onewire.o
 OBJS += ds18b20.o
+OBJS += smbus.o
 OBJS += proto/telemetry.pb.o
 OBJS += ../nanopb/pb_encode.o
 OBJS += ../nanopb/pb_common.o
