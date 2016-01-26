@@ -35,14 +35,15 @@
 #include "bmp180.h"
 #include "utils.h"
 #include "eeprom.h"
+#include "ds18b20.h"
 
 //#define LOG_TO_EEPROM
 
 /* Set up a timer to create 1mS ticks. */
 static void systick_setup(void)
 {
-	/* clock rate / 1000 to get 1mS interrupt rate */
-	systick_set_reload(168000);
+	/* clock rate / 1000_000 to get 1uS interrupt rate */
+	systick_set_reload(168);
 	systick_set_clocksource(STK_CSR_CLKSOURCE_AHB);
 	systick_counter_enable();
 	/* this done last */
@@ -80,6 +81,7 @@ int main(void)
 {
 	BMP180 bmp180_sensor;
 	EEPROM eeprom;
+	DS18B20 ds18b20;
 	clock_setup();
 	gpio_setup();
 	systick_setup();
@@ -93,7 +95,6 @@ int main(void)
 	BMP180_setup(&bmp180_sensor, I2C2, BMP180_MODE_ULTRA_HIGHRES);
 	EEPROM_setup(&eeprom, I2C2);
 	msleep(1000);
-//	printf("Frequence: %d\n", rcc_apb1_frequency);
 
 	/* Set two LEDs for wigwag effect when toggling. */
 	gpio_set(GPIOD, GPIO12 | GPIO14);
@@ -102,6 +103,8 @@ int main(void)
 	uint8_t buffer[128];
 //	char *ptr = buffer;
 	int packet_id = 0;
+
+	volatile uint8_t devices_num = ds18b20_setup(&ds18b20, GPIOE, GPIO3);
 
 	TelemetryPacket packet = TelemetryPacket_init_zero;
 	while (1) {
