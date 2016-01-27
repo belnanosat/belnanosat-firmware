@@ -37,6 +37,7 @@
 #include "eeprom.h"
 #include "ds18b20.h"
 #include "smbus.h"
+#include "mpu6050.h"
 
 //#define LOG_TO_EEPROM
 
@@ -82,20 +83,22 @@ int main(void)
 {
 	BMP180 bmp180_sensor;
 	EEPROM eeprom;
-	DS18B20 ds18b20;
+	DS18B20Bus ds18b20_bus;
 	clock_setup();
 	gpio_setup();
 	systick_setup();
 	usart_setup();
 //	adc_setup();
 	i2c_setup();
-	smbus_setup();
+//	smbus_setup();
+	MPU6050 mpu6050;
+//	mpu6050_setup(&mpu6050, I2C2);
 
 	// Wait for initialization of all external sensors
 	msleep(100);
 
 	BMP180_setup(&bmp180_sensor, I2C2, BMP180_MODE_ULTRA_HIGHRES);
-	EEPROM_setup(&eeprom, I2C2);
+//	EEPROM_setup(&eeprom, I2C2);
 	msleep(1000);
 
 	/* Set two LEDs for wigwag effect when toggling. */
@@ -106,7 +109,9 @@ int main(void)
 //	char *ptr = buffer;
 	int packet_id = 0;
 
-	volatile uint8_t devices_num = ds18b20_setup(&ds18b20, GPIOE, GPIO3);
+	rcc_periph_clock_enable(RCC_GPIOE);
+	volatile uint8_t devices_num = ds18b20_setup(&ds18b20_bus, GPIOE, GPIO3,
+	                                             DS18B20_RESOLUTION_12_BITS);
 
 //	volatile uint16_t temp = smbus_read_word(0, 0x06);
 
@@ -115,6 +120,13 @@ int main(void)
 		int i;
 		uint8_t checksum;
 		gpio_toggle(GPIOD, GPIO12);
+
+		// Clear all optional fields
+		/* packet.has_ds18b20_temperature1 = false; */
+		/* packet.has_ds18b20_temperature2 = false; */
+		/* packet.has_ds18b20_temperature3 = false; */
+		/* packet.has_ds18b20_temperature4 = false; */
+
 		BMP180_start_conv(&bmp180_sensor);
 		BMP180_finish_conv(&bmp180_sensor);
 
@@ -126,7 +138,14 @@ int main(void)
 		packet.status = 0xFFFFFFFF;
 		packet.altitude = bmp180_sensor.altitude;
 		packet.pressure = bmp180_sensor.pressure;
-		packet.bmp180_temperature = bmp180_sensor.temperature;
+		/* packet.bmp180_temperature = bmp180_sensor.temperature; */
+
+		ds18b20_start_all(&ds18b20_bus);
+		msleep(1000);
+		/* if (devices_num >= 1) { */
+		/* 	packet.ds18b20_temperature1 = ds18b20_read_raw(&ds18b20, 0); */
+		/* 	packet.has_ds18b20_temperature1 = true; */
+		/* } */
 
 
 		pb_ostream_t stream = pb_ostream_from_buffer(buffer + 1, sizeof(buffer) - 1);
@@ -137,7 +156,6 @@ int main(void)
 #endif
 
 		buffer[0] = stream.bytes_written;
-//		printf("\n\r%d", stream.bytes_written);
 		checksum = 0;
 		for (i = 0; i <= stream.bytes_written; ++i) {
 			checksum ^= buffer[i];
@@ -148,15 +166,8 @@ int main(void)
 			putc(buffer[i], stdout);
 		}
 
-		/* printf("\n\r%d: stm32-user@satellite $ %d %d %d %d %f", ++packet_id, */
-		/*        (int)status, */
-		/*        (int)stream.bytes_written, */
-		/*        (int)bmp180_sensor.temperature, (int)bmp180_sensor.pressure, */
-		/*        bmp180_sensor.altitude); */
-		/* val = i2c_read(); */
-		/* printf("ok! %d\n", (int)val); */
 		fflush(stdout);
-		msleep(1000);
+//		msleep(1000);
 	}
 
 	return 0;

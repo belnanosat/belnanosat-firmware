@@ -21,10 +21,11 @@
 #define DS18B20_H
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #include "onewire.h"
 
-#define DS18B20_MAX_DEVICES_NUM 16
+#define DS18B20_MAX_DEVICES_NUM 4
 
 #define DS18B20_CMD_SEARCH_ROM        0xF0
 #define DS18B20_CMD_READ_ROM          0x33
@@ -39,19 +40,33 @@
 #define DS18B20_CMD_RECALL            0xB8
 #define DS18B20_CMD_READ_POWER_SUPPLY 0xB4
 
-typedef struct DS18B20
+#define DS18B20_RESOLUTION_9_BITS     0x01
+#define DS18B20_RESOLUTION_10_BITS    0x02
+#define DS18B20_RESOLUTION_11_BITS    0x03
+#define DS18B20_RESOLUTION_12_BITS    0x04
+
+typedef struct DS18B20 {
+	uint8_t rom[8];
+	bool is_present;
+} DS18B20;
+
+typedef struct DS18B20Bus
 {
 	OneWire_t one_wire;
 	uint32_t devices_num;
 	uint32_t start_time;
 	uint8_t conv_process;
-	uint8_t rom[DS18B20_MAX_DEVICES_NUM][8];
-} DS18B20;
+	uint8_t resolution;
+
+	DS18B20 devices[DS18B20_MAX_DEVICES_NUM];
+} DS18B20Bus;
 
 /* Returns number of found devices on the 1-Wire bus */
-uint8_t ds18b20_setup(DS18B20 *sensor, uint32_t gpio_port, uint16_t gpio_pin);
-uint8_t ds18b20_start_all(DS18B20 *sensor);
-uint8_t ds18b20_start_one(DS18B20 *sensor, uint8_t id);
-uint8_t ds18b20_read(DS18B20 *sensor, uint8_t id, float *res);
+uint8_t ds18b20_setup(DS18B20Bus *bus, uint32_t gpio_port, uint16_t gpio_pin,
+                      uint8_t resolution);
+uint8_t ds18b20_start_all(DS18B20Bus *bus);
+uint8_t ds18b20_start_one(DS18B20Bus *bus, uint8_t id);
+uint8_t ds18b20_read(DS18B20Bus *bus, uint8_t id, float *res);
+uint16_t ds18b20_read_raw(DS18B20Bus *bus, uint8_t id);
 
 #endif

@@ -19,57 +19,95 @@
 
 #include "ds18b20.h"
 
-uint8_t ds18b20_setup(DS18B20 *sensor, uint32_t gpio_port, uint16_t gpio_pin)
-{
+#include <string.h>
+#include <stdio.h>
+
+static uint8_t devices_map[4][8] = {
+	{0x28, 0xFF, 0x5D, 0x18, 0x67, 0x14, 0x02, 0xA1},
+	{0x28, 0xFF, 0x43, 0x1F, 0x67, 0x14, 0x02, 0xF9},
+	{0, 0, 0, 0, 0, 0, 0, 0},
+	{0, 0, 0, 0, 0, 0, 0, 0},
+};
+
+uint8_t ds18b20_setup(DS18B20Bus *bus, uint32_t gpio_port, uint16_t gpio_pin,
+                      uint8_t resolution) {
 	uint8_t devices;
-	OneWire_Init(&sensor->one_wire, gpio_port, gpio_pin);
-	devices = OneWire_First(&sensor->one_wire);
-	sensor->devices_num = 0;
-	sensor->conv_process = 0;
-	sensor->start_time = 0;
-	while (devices) {
-		sensor->devices_num++;
-		OneWire_GetFullROM(&sensor->one_wire, sensor->rom[sensor->devices_num - 1]);
-		devices = OneWire_Next(&sensor->one_wire);
+	uint8_t tmp_rom[8];
+	int i;
+
+	for (i = 0; i < 4; ++i) {
+		bus->devices[i].is_present = false;
 	}
-	return sensor->devices_num;
+
+	OneWire_Init(&bus->one_wire, gpio_port, gpio_pin);
+	devices = OneWire_First(&bus->one_wire);
+	bus->devices_num = 0;
+	bus->conv_process = 0;
+	bus->start_time = 0;
+	while (devices) {
+		bus->devices_num++;
+		OneWire_GetFullROM(&bus->one_wire, tmp_rom);
+		// Is it a known device?
+		bool is_found = false;
+		for (i = 0; i < 4; ++i) {
+			if (!memcmp(devices_map[i], tmp_rom, 8)) {
+				bus->devices[i].is_present = true;
+				memmove(bus->devices[i].rom, tmp_rom, 8);
+				is_found = true;
+				break;
+			}
+		}
+		if (!is_found) {
+			printf("Warning: unknown device serial code, ignoring it: ");
+			for (i = 0; i < 8; ++i) {
+				printf("0x%02X, ", tmp_rom[i]);
+			}
+			printf("\n\r");
+		}
+		devices = OneWire_Next(&bus->one_wire);
+	}
+	return bus->devices_num;
 }
 
-uint8_t ds18b20_start_all(DS18B20 *sensor)
-{
-	OneWire_Reset(&sensor->one_wire);
-	OneWire_WriteByte(&sensor->one_wire, DS18B20_CMD_SKIP_ROM);
-	OneWire_WriteByte(&sensor->one_wire, DS18B20_CMD_CONVERT_T);
+uint8_t ds18b20_start_all(DS18B20Bus *bus) {
+	OneWire_Reset(&bus->one_wire);
+	OneWire_WriteByte(&bus->one_wire, DS18B20_CMD_SKIP_ROM);
+	OneWire_WriteByte(&bus->one_wire, DS18B20_CMD_CONVERT_T);
 	return 1;
 }
 
-uint8_t ds18b20_start_one(DS18B20 *sensor, uint8_t id)
-{
-	OneWire_Reset(&sensor->one_wire);
-	OneWire_SelectWithPointer(&sensor->one_wire, sensor->rom[id]);
-	OneWire_WriteByte(&sensor->one_wire, DS18B20_CMD_CONVERT_T);
+uint8_t ds18b20_start_one(DS18B20Bus *bus, uint8_t id) {
+	if (!bus->devices[id].is_present) return 0;
+	OneWire_Reset(&bus->one_wire);
+	OneWire_SelectWithPointer(&bus->one_wire, bus->devices[id].rom);
+	OneWire_WriteByte(&bus->one_wire, DS18B20_CMD_CONVERT_T);
 	return 1;
 }
 
-uint8_t ds18b20_read(DS18B20 *sensor, uint8_t id, float *res)
-{
+uint8_t ds18b20_read(DS18B20Bus *bus, uint8_t id, float *res) {
+	if (!bus->devices[id].is_present) return 0;
+	uint32_t temperature = ds18b20_read_raw(bus, id);
+	*res = (temperature >> 4) | (((temperature >> 8) & 0x07) << 4);
+	*res += ((temperature & 0x0F) * 0.0625f);
+	return 1;
+}
+
+uint16_t ds18b20_read_raw(DS18B20Bus *bus, uint8_t id) {
 	int i;
 	uint8_t data[9];
 	uint8_t crc;
+	if (!bus->devices[id].is_present) return 0;
 	/* Wait for the end of the conversion */
-	while(!OneWire_ReadBit(&sensor->one_wire));
-	OneWire_Reset(&sensor->one_wire);
-	OneWire_SelectWithPointer(&sensor->one_wire, sensor->rom[id]);
-	OneWire_WriteByte(&sensor->one_wire, DS18B20_CMD_READ_SCRATCHPAD);
+	while(!OneWire_ReadBit(&bus->one_wire));
+	OneWire_Reset(&bus->one_wire);
+	OneWire_SelectWithPointer(&bus->one_wire, bus->devices[id].rom);
+	OneWire_WriteByte(&bus->one_wire, DS18B20_CMD_READ_SCRATCHPAD);
 	for(i = 0; i < 9; ++i) {
-		data[i] = OneWire_ReadByte(&sensor->one_wire);
+		data[i] = OneWire_ReadByte(&bus->one_wire);
 	}
 	crc = OneWire_CRC8(data, 8);
 	if(crc != data[8]) {
 		return 0;
 	}
-	uint32_t temperature = data[0] | ((uint32_t)data[1] << 8);
-	*res = (temperature >> 4) | (((temperature >> 8) & 0x07) << 4);
-	*res += ((temperature & 0x0F) * 0.0625f);
-	return 1;
+	return data[0] | ((uint32_t)data[1] << 8);
 }

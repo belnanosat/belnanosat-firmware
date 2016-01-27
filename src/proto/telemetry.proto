@@ -11,4 +11,8 @@ message TelemetryPacket {
 	required int32 bmp180_temperature = 9;
 	optional float voltage = 10;
 	optional float radiation = 11;
+	optional uint32 ds18b20_temperature1 = 12;
+	optional uint32 ds18b20_temperature2 = 13;
+	optional uint32 ds18b20_temperature3 = 14;
+	optional uint32 ds18b20_temperature4 = 15;
 }
