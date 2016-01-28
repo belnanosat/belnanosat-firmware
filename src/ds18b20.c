@@ -22,6 +22,8 @@
 #include <string.h>
 #include <stdio.h>
 
+#include "utils.h"
+
 /*
  * This lets us determine a short id (from 0 to 3) of each sensor.
  */
@@ -45,8 +47,7 @@ uint8_t ds18b20_setup(DS18B20Bus *bus, uint32_t gpio_port, uint16_t gpio_pin,
 	OneWire_Init(&bus->one_wire, gpio_port, gpio_pin);
 	devices = OneWire_First(&bus->one_wire);
 	bus->devices_num = 0;
-	bus->conv_process = 0;
-	bus->start_time = 0;
+	bus->resolution = resolution;
 	while (devices) {
 		bus->devices_num++;
 		OneWire_GetFullROM(&bus->one_wire, tmp_rom);
@@ -68,6 +69,23 @@ uint8_t ds18b20_setup(DS18B20Bus *bus, uint32_t gpio_port, uint16_t gpio_pin,
 			printf("\n\r");
 		}
 		devices = OneWire_Next(&bus->one_wire);
+	}
+
+	// Choose resolution level
+	for (i = 0; i < 4; ++i) {
+		if (!bus->devices[i].is_present) continue;
+		OneWire_Reset(&bus->one_wire);
+		OneWire_SelectWithPointer(&bus->one_wire, bus->devices[i].rom);
+		OneWire_WriteByte(&bus->one_wire, DS18B20_CMD_WRITE_SCRATCHPAD);
+		/*
+		 * Write just zero values as T_h and T_l because we
+		 * dont't use this alarm signaling feature
+		 */
+		OneWire_WriteByte(&bus->one_wire, 0);
+		OneWire_WriteByte(&bus->one_wire, 0);
+		uint8_t conf_register = 0x1F;
+		conf_register |= (resolution << 5);
+		OneWire_WriteByte(&bus->one_wire, conf_register);
 	}
 	return bus->devices_num;
 }

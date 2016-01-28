@@ -40,10 +40,10 @@
 #define DS18B20_CMD_RECALL            0xB8
 #define DS18B20_CMD_READ_POWER_SUPPLY 0xB4
 
-#define DS18B20_RESOLUTION_9_BITS     0x01
-#define DS18B20_RESOLUTION_10_BITS    0x02
-#define DS18B20_RESOLUTION_11_BITS    0x03
-#define DS18B20_RESOLUTION_12_BITS    0x04
+#define DS18B20_RESOLUTION_9_BITS     0x00
+#define DS18B20_RESOLUTION_10_BITS    0x01
+#define DS18B20_RESOLUTION_11_BITS    0x02
+#define DS18B20_RESOLUTION_12_BITS    0x03
 
 typedef struct DS18B20 {
 	uint8_t rom[8];
@@ -54,8 +54,6 @@ typedef struct DS18B20Bus
 {
 	OneWire_t one_wire;
 	uint32_t devices_num;
-	uint32_t start_time;
-	uint8_t conv_process;
 	uint8_t resolution;
 
 	DS18B20 devices[DS18B20_MAX_DEVICES_NUM];

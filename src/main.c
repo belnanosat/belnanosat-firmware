@@ -140,8 +140,6 @@ int main(void)
 		packet.pressure = bmp180_sensor.pressure;
 		/* packet.bmp180_temperature = bmp180_sensor.temperature; */
 
-		ds18b20_start_all(&ds18b20_bus);
-		msleep(1000);
 		/* if (devices_num >= 1) { */
 		/* 	packet.ds18b20_temperature1 = ds18b20_read_raw(&ds18b20, 0); */
 		/* 	packet.has_ds18b20_temperature1 = true; */
@@ -162,9 +160,19 @@ int main(void)
 		}
 		buffer[stream.bytes_written + 1] = checksum;
 
-		for (i = 0; i < TelemetryPacket_size + 2; ++i) {
-			putc(buffer[i], stdout);
+		ds18b20_start_all(&ds18b20_bus);
+		uint32_t start_time = get_time_ms();
+		for (i = 0; i < 4; ++i) {
+			if (ds18b20_bus.devices[i].is_present) {
+				float tmp = 0.0f;
+				ds18b20_read(&ds18b20_bus, i, &tmp);
+				printf("Device #%d: %02X %f\n\r", i + 1, ds18b20_read_raw(&ds18b20_bus, i), tmp);
+			}
 		}
+		printf("Timeout: %d\n\r", (int)(get_time_ms() - start_time));
+		/* for (i = 0; i < TelemetryPacket_size + 2; ++i) { */
+		/* 	putc(buffer[i], stdout); */
+		/* } */
 
 		fflush(stdout);
 //		msleep(1000);
