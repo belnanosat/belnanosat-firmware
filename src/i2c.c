@@ -99,6 +99,8 @@ uint16_t i2c_read_word(uint32_t i2c, uint8_t device_address,
 	uint32_t reg32 __attribute__((unused));
 	uint16_t res;
 
+	while (I2C_SR2(i2c) & I2C_SR2_BUSY);
+
 	i2c_send_start(i2c);
 	while (!((I2C_SR1(i2c) & I2C_SR1_SB)
 	         & (I2C_SR2(i2c) & (I2C_SR2_MSL | I2C_SR2_BUSY))));
@@ -118,17 +120,18 @@ uint16_t i2c_read_word(uint32_t i2c, uint8_t device_address,
 	i2c_send_7bit_address(i2c, device_address, I2C_READ);
 
 	/* 2-byte receive is a special case. See datasheet POS bit. */
-	I2C_CR1(i2c) |= (I2C_CR1_POS | I2C_CR1_ACK);
 	while (!(I2C_SR1(i2c) & I2C_SR1_ADDR));
 
 	reg32 = I2C_SR2(i2c);
-	I2C_CR1(i2c) &= ~I2C_CR1_ACK;
+
+	I2C_CR1(i2c) |= (I2C_CR1_POS | I2C_CR1_ACK);
 	while (!(I2C_SR1(i2c) & I2C_SR1_BTF));
 	res = (uint16_t)(I2C_DR(i2c) << 8); /* MSB */
-
-	I2C_CR1(i2c) |= I2C_CR1_STOP;
-
+	I2C_CR1(i2c) &= ~I2C_CR1_ACK;
+	while (!(I2C_SR1(i2c) & I2C_SR1_BTF));
 	res |= I2C_DR(i2c); /* LSB */
+	i2c_send_stop(i2c);
+
 
 	I2C_CR1(i2c) &= ~I2C_CR1_POS;
 
