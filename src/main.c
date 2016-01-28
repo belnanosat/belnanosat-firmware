@@ -64,8 +64,7 @@ static void clock_setup(void)
 static void gpio_setup(void)
 {
 	/* Set GPIO11-15 (in GPIO port D) to 'output push-pull'. */
-	gpio_mode_setup(GPIOD, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE,
-	                GPIO11 | GPIO12 | GPIO13 | GPIO14 | GPIO15);
+	gpio_mode_setup(GPIOD, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO12);
 }
 
 static void process_ds18b20(DS18B20Bus *bus, TelemetryPacket *packet) {
@@ -131,11 +130,9 @@ int main(void)
 	msleep(1000);
 
 	/* Set two LEDs for wigwag effect when toggling. */
-	gpio_set(GPIOD, GPIO12 | GPIO14);
+	gpio_set(GPIOD, GPIO12);
 
-	/* Blink the LEDs (PD12, PD13, PD14 and PD15) on the board. */
 	uint8_t buffer[128];
-//	char *ptr = buffer;
 
 	rcc_periph_clock_enable(RCC_GPIOE);
 	volatile uint8_t devices_num = ds18b20_setup(&ds18b20_bus, GPIOE, GPIO3,
