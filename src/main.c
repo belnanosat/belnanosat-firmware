@@ -107,6 +107,26 @@ static void process_bmp180(BMP180 *sensor, TelemetryPacket *packet) {
 	bmp180_start_conv(sensor);
 }
 
+// NOTE: This function assumees that length <= 255
+static void stuff_data(const uint8_t *input_data, int length, uint8_t *output_data) {
+	uint8_t *input_data_end = input_data + length;
+	uint8_t *block_start = output_data++;
+	uint8_t cur_code = 0x01;
+	while (input_data < input_data_end) {
+		if (*input_data == 0) {
+			*block_start++ = cur_code;
+			block_start = output_data++;
+			cur_code = 0x01;
+		} else {
+			*(output_data++) = *input_data;
+			++cur_code;
+		}
+		++input_data;
+	}
+	*block_start++ = cur_code;
+	*output_data = 0;
+}
+
 int main(void)
 {
 	BMP180 bmp180_sensor;
@@ -132,7 +152,8 @@ int main(void)
 	/* Set two LEDs for wigwag effect when toggling. */
 	gpio_set(GPIOD, GPIO12);
 
-	uint8_t buffer[128];
+	static uint8_t buffer1[256];
+	static uint8_t buffer2[256];
 
 	rcc_periph_clock_enable(RCC_GPIOE);
 	volatile uint8_t devices_num = ds18b20_setup(&ds18b20_bus, GPIOE, GPIO3,
@@ -156,25 +177,23 @@ int main(void)
 			++packet.packet_id;
 			packet.status = 0xFFFFFFFF;
 
-			for (i = 0; i < TelemetryPacket_size + 2; ++i) {
-				buffer[i] = 0;
-			}
-			pb_ostream_t stream = pb_ostream_from_buffer(buffer + 1, sizeof(buffer) - 1);
+			pb_ostream_t stream = pb_ostream_from_buffer(buffer1, sizeof(buffer1));
 			bool status = pb_encode(&stream, TelemetryPacket_fields, &packet);
 
+			checksum = 0;
+			for (i = 0; i < stream.bytes_written; ++i) {
+				checksum ^= buffer1[i];
+			}
+			buffer1[stream.bytes_written] = checksum;
+
+			stuff_data(buffer1, stream.bytes_written + 1, buffer2);
+
 #ifdef LOG_TO_EEPROM
-			EEPROM_write(&eeprom, buffer, stream.bytes_written);
+			EEPROM_write(&eeprom, buffer2, stream.bytes_written);
 #endif
 
-			buffer[0] = stream.bytes_written;
-			checksum = 0;
-			for (i = 0; i <= stream.bytes_written; ++i) {
-				checksum ^= buffer[i];
-			}
-			buffer[stream.bytes_written + 1] = checksum;
-
-			for (i = 0; i < TelemetryPacket_size + 2; ++i) {
-				putc(buffer[i], stdout);
+			for (i = 0; i < stream.bytes_written + 3; ++i) {
+				putc(buffer2[i], stdout);
 			}
 			fflush(stdout);
 
