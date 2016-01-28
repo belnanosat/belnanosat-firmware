@@ -1,18 +1,19 @@
 syntax = "proto2";
 message TelemetryPacket {
 	required int32 packet_id = 1;
-	required uint32 status = 2;
-	optional float temperature_internal = 3;
-	optional float temperature_external = 4;
-	required float altitude = 5;
-	optional float latitude = 6;
-	optional float longitude = 7;
-	required int32 pressure = 8;
-	required int32 bmp180_temperature = 9;
-	optional float voltage = 10;
-	optional float radiation = 11;
-	optional uint32 ds18b20_temperature1 = 12;
-	optional uint32 ds18b20_temperature2 = 13;
-	optional uint32 ds18b20_temperature3 = 14;
-	optional uint32 ds18b20_temperature4 = 15;
+	required fixed32 status = 2;
+	required fixed32 timestamp = 3;
+	optional float temperature_internal = 4;
+	optional float temperature_external = 5;
+	optional float altitude = 6;
+	optional float latitude = 7;
+	optional float longitude = 8;
+	optional int32 pressure = 9;
+	optional int32 bmp180_temperature = 10;
+	optional float voltage = 11;
+	optional float radiation = 12;
+	optional uint32 ds18b20_temperature1 = 13;
+	optional uint32 ds18b20_temperature2 = 14;
+	optional uint32 ds18b20_temperature3 = 15;
+	optional uint32 ds18b20_temperature4 = 16;
 }

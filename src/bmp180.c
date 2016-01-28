@@ -45,29 +45,35 @@ static int32_t read_temperature(BMP180 *sensor);
 static void start_pressure_conv(BMP180 *sensor);
 static int32_t finish_pressure_conv(BMP180 *sensor);
 
-void BMP180_setup(BMP180 *sensor, uint32_t i2c, uint8_t oss) {
+void bmp180_setup(BMP180 *sensor, uint32_t i2c, uint8_t oss) {
 	sensor->i2c = i2c;
 	sensor->oss = oss;
 	// TODO: don't crash in case of failure
 	assert(i2c_read_byte(sensor->i2c, BMP180_ADDRESS, BMP180_CHIP_ID) == 0x55);
 
 	read_calib_param(sensor);
+
+	bmp180_start_conv(sensor);
 }
 
-void BMP180_start_conv(BMP180 *sensor) {
+void bmp180_start_conv(BMP180 *sensor) {
 	sensor->temperature = read_temperature(sensor);
 
 	start_pressure_conv(sensor);
 	sensor->conv_start_time = get_time_ms();
 }
 
-void BMP180_finish_conv(BMP180 *sensor) {
+void bmp180_finish_conv(BMP180 *sensor) {
 	while (get_time_ms() < sensor->conv_start_time +
 	       pressure_conversion_time[sensor->oss]);
 
 	sensor->pressure = finish_pressure_conv(sensor);
 	sensor->altitude = 44330 * (1 - powf(
 	    (sensor->pressure / BMP180_MSLP), 0.1903f));
+}
+
+bool bmp180_is_conversion_finished(BMP180 *sensor) {
+	return get_time_since(sensor->conv_start_time) >= pressure_conversion_time[sensor->oss];
 }
 
 int32_t read_temperature(BMP180 *sensor) {

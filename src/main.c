@@ -40,6 +40,7 @@
 #include "mpu6050.h"
 
 //#define LOG_TO_EEPROM
+#define PACKET_DELAY_MS 500
 
 /* Set up a timer to create 1mS ticks. */
 static void systick_setup(void)
@@ -67,16 +68,44 @@ static void gpio_setup(void)
 	                GPIO11 | GPIO12 | GPIO13 | GPIO14 | GPIO15);
 }
 
-static void getline(char* buf, int maxlen) {
-	int curlen = 0;
-	while (curlen < maxlen) {
-		buf[curlen] = getchar();
-		if (buf[curlen] == '\r') {
-			buf[curlen] = 0;
-			break;
-		}
-		++curlen;
+static void process_ds18b20(DS18B20Bus *bus, TelemetryPacket *packet) {
+	if (!ds18b20_is_conversion_finished(bus)) return;
+
+	if (bus->devices[0].is_present) {
+		packet->has_ds18b20_temperature1 = true;
+		packet->ds18b20_temperature1 = ds18b20_read_raw(bus, 0);
 	}
+
+	if (bus->devices[1].is_present) {
+		packet->has_ds18b20_temperature2 = true;
+		packet->ds18b20_temperature2 = ds18b20_read_raw(bus, 1);
+	}
+
+	if (bus->devices[2].is_present) {
+		packet->has_ds18b20_temperature3 = true;
+		packet->ds18b20_temperature3 = ds18b20_read_raw(bus, 2);
+	}
+
+	if (bus->devices[3].is_present) {
+		packet->has_ds18b20_temperature4 = true;
+		packet->ds18b20_temperature4 = ds18b20_read_raw(bus, 3);
+	}
+
+	ds18b20_start_all(bus);
+}
+
+static void process_bmp180(BMP180 *sensor, TelemetryPacket *packet) {
+	if (!bmp180_is_conversion_finished(sensor)) return;
+	bmp180_finish_conv(sensor);
+
+	packet->altitude = sensor->altitude;
+	packet->has_altitude = true;
+	packet->pressure = sensor->pressure;
+	packet->has_pressure = true;
+	packet->bmp180_temperature = sensor->temperature;
+	packet->has_bmp180_temperature = true;
+
+	bmp180_start_conv(sensor);
 }
 
 int main(void)
@@ -97,7 +126,7 @@ int main(void)
 	// Wait for initialization of all external sensors
 	msleep(100);
 
-	BMP180_setup(&bmp180_sensor, I2C2, BMP180_MODE_ULTRA_HIGHRES);
+	bmp180_setup(&bmp180_sensor, I2C2, BMP180_MODE_ULTRA_HIGHRES);
 //	EEPROM_setup(&eeprom, I2C2);
 	msleep(1000);
 
@@ -107,7 +136,6 @@ int main(void)
 	/* Blink the LEDs (PD12, PD13, PD14 and PD15) on the board. */
 	uint8_t buffer[128];
 //	char *ptr = buffer;
-	int packet_id = 0;
 
 	rcc_periph_clock_enable(RCC_GPIOE);
 	volatile uint8_t devices_num = ds18b20_setup(&ds18b20_bus, GPIOE, GPIO3,
@@ -116,66 +144,48 @@ int main(void)
 //	volatile uint16_t temp = smbus_read_word(0, 0x06);
 
 	TelemetryPacket packet = TelemetryPacket_init_zero;
+	uint32_t last_packet_time = get_time_ms();
 	while (1) {
-		int i;
-		uint8_t checksum;
 		gpio_toggle(GPIOD, GPIO12);
 
-		// Clear all optional fields
-		/* packet.has_ds18b20_temperature1 = false; */
-		/* packet.has_ds18b20_temperature2 = false; */
-		/* packet.has_ds18b20_temperature3 = false; */
-		/* packet.has_ds18b20_temperature4 = false; */
+		process_bmp180(&bmp180_sensor, &packet);
+		process_ds18b20(&ds18b20_bus, &packet);
 
-		BMP180_start_conv(&bmp180_sensor);
-		BMP180_finish_conv(&bmp180_sensor);
+		/* Is it time to send a packet? */
+		if (get_time_since(last_packet_time) > PACKET_DELAY_MS) {
+			int i;
+			uint8_t checksum;
 
+			++packet.packet_id;
+			packet.status = 0xFFFFFFFF;
 
-		for (i = 0; i < TelemetryPacket_size + 2; ++i) {
-			buffer[i] = 0;
-		}
-		packet.packet_id = packet_id;
-		packet.status = 0xFFFFFFFF;
-		packet.altitude = bmp180_sensor.altitude;
-		packet.pressure = bmp180_sensor.pressure;
-		/* packet.bmp180_temperature = bmp180_sensor.temperature; */
-
-		/* if (devices_num >= 1) { */
-		/* 	packet.ds18b20_temperature1 = ds18b20_read_raw(&ds18b20, 0); */
-		/* 	packet.has_ds18b20_temperature1 = true; */
-		/* } */
-
-
-		pb_ostream_t stream = pb_ostream_from_buffer(buffer + 1, sizeof(buffer) - 1);
-		bool status = pb_encode(&stream, TelemetryPacket_fields, &packet);
+			for (i = 0; i < TelemetryPacket_size + 2; ++i) {
+				buffer[i] = 0;
+			}
+			pb_ostream_t stream = pb_ostream_from_buffer(buffer + 1, sizeof(buffer) - 1);
+			bool status = pb_encode(&stream, TelemetryPacket_fields, &packet);
 
 #ifdef LOG_TO_EEPROM
-		EEPROM_write(&eeprom, buffer, stream.bytes_written);
+			EEPROM_write(&eeprom, buffer, stream.bytes_written);
 #endif
 
-		buffer[0] = stream.bytes_written;
-		checksum = 0;
-		for (i = 0; i <= stream.bytes_written; ++i) {
-			checksum ^= buffer[i];
-		}
-		buffer[stream.bytes_written + 1] = checksum;
-
-		ds18b20_start_all(&ds18b20_bus);
-		uint32_t start_time = get_time_ms();
-		for (i = 0; i < 4; ++i) {
-			if (ds18b20_bus.devices[i].is_present) {
-				float tmp = 0.0f;
-				ds18b20_read(&ds18b20_bus, i, &tmp);
-				printf("Device #%d: %02X %f\n\r", i + 1, ds18b20_read_raw(&ds18b20_bus, i), tmp);
+			buffer[0] = stream.bytes_written;
+			checksum = 0;
+			for (i = 0; i <= stream.bytes_written; ++i) {
+				checksum ^= buffer[i];
 			}
-		}
-		printf("Timeout: %d\n\r", (int)(get_time_ms() - start_time));
-		/* for (i = 0; i < TelemetryPacket_size + 2; ++i) { */
-		/* 	putc(buffer[i], stdout); */
-		/* } */
+			buffer[stream.bytes_written + 1] = checksum;
 
-		fflush(stdout);
-//		msleep(1000);
+			for (i = 0; i < TelemetryPacket_size + 2; ++i) {
+				putc(buffer[i], stdout);
+			}
+			fflush(stdout);
+
+			last_packet_time = get_time_ms();
+
+			/* Clear packet */
+			packet = (TelemetryPacket)TelemetryPacket_init_zero;
+		}
 	}
 
 	return 0;

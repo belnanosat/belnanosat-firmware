@@ -20,6 +20,9 @@
 #ifndef BMP180_H
 #define BMP180_H
 
+#include <stdint.h>
+#include <stdbool.h>
+
 #define BMP180_ADDRESS        0x77
 #define BMP180_CHIP_ID        0xD0
 
@@ -49,8 +52,6 @@
 // Mean Sea Level Pressure = 1013.25 hPA
 #define BMP180_MSLP                    101325.0f
 
-#include <stdint.h>
-
 typedef struct
 {
 	int16_t AC1, AC2, AC3, B1, B2, MB, MC, MD;
@@ -64,8 +65,9 @@ typedef struct
 	float altitude;
 } BMP180;
 
-extern void BMP180_setup(BMP180 *sensor, uint32_t i2c, uint8_t oss);
-extern void BMP180_start_conv(BMP180 *sensor);
-extern void BMP180_finish_conv(BMP180 *sensor);
+extern void bmp180_setup(BMP180 *sensor, uint32_t i2c, uint8_t oss);
+extern void bmp180_start_conv(BMP180 *sensor);
+extern void bmp180_finish_conv(BMP180 *sensor);
+extern bool bmp180_is_conversion_finished(BMP180 *sensor);
 
 #endif

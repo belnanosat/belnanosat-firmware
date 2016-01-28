@@ -119,7 +119,7 @@ uint16_t ds18b20_read_raw(DS18B20Bus *bus, uint8_t id) {
 	uint8_t crc;
 	if (!bus->devices[id].is_present) return 0;
 	/* Wait for the end of the conversion */
-	while(!OneWire_ReadBit(&bus->one_wire));
+	while(!ds18b20_is_conversion_finished(bus));
 	OneWire_Reset(&bus->one_wire);
 	OneWire_SelectWithPointer(&bus->one_wire, bus->devices[id].rom);
 	OneWire_WriteByte(&bus->one_wire, DS18B20_CMD_READ_SCRATCHPAD);
@@ -131,4 +131,8 @@ uint16_t ds18b20_read_raw(DS18B20Bus *bus, uint8_t id) {
 		return 0;
 	}
 	return data[0] | ((uint32_t)data[1] << 8);
+}
+
+bool ds18b20_is_conversion_finished(DS18B20Bus *bus) {
+	return OneWire_ReadBit(&bus->one_wire);
 }

@@ -66,5 +66,6 @@ uint8_t ds18b20_start_all(DS18B20Bus *bus);
 uint8_t ds18b20_start_one(DS18B20Bus *bus, uint8_t id);
 uint8_t ds18b20_read(DS18B20Bus *bus, uint8_t id, float *res);
 uint16_t ds18b20_read_raw(DS18B20Bus *bus, uint8_t id);
+bool ds18b20_is_conversion_finished(DS18B20Bus *bus);
 
 #endif
