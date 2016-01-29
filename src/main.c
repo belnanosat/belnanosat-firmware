@@ -107,8 +107,32 @@ static void process_bmp180(BMP180 *sensor, TelemetryPacket *packet) {
 	bmp180_start_conv(sensor);
 }
 
+uint32_t last_mpu6050_conversion;
+
+static void process_mpu6050(TelemetryPacket *packet) {
+	if (get_time_since(last_mpu6050_conversion) < 100) return;
+
+	int16_t ax, ay, az, gx, gy, gz;
+	MPU6050_getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
+
+	packet->has_acceleration_x = true;
+	packet->has_acceleration_y = true;
+	packet->has_acceleration_z = true;
+	packet->has_gyroscope_x = true;
+	packet->has_gyroscope_y = true;
+	packet->has_gyroscope_z = true;
+	packet->acceleration_x = ax;
+	packet->acceleration_y = ay;
+	packet->acceleration_z = az;
+	packet->gyroscope_x = gx;
+	packet->gyroscope_y = gy;
+	packet->gyroscope_z = gz;
+
+	last_mpu6050_conversion = get_time_ms();
+}
+
 // NOTE: This function assumees that length <= 255
-static void stuff_data(const uint8_t *input_data, int length, uint8_t *output_data) {
+static void stuff_data(uint8_t *input_data, int length, uint8_t *output_data) {
 	uint8_t *input_data_end = input_data + length;
 	uint8_t *block_start = output_data++;
 	uint8_t cur_code = 0x01;
@@ -139,8 +163,8 @@ int main(void)
 //	adc_setup();
 	i2c_setup();
 //	smbus_setup();
-	MPU6050 mpu6050;
-//	mpu6050_setup(&mpu6050, I2C2);
+	MPU6050_initialize();
+	last_mpu6050_conversion = get_time_ms();
 
 	// Wait for initialization of all external sensors
 	msleep(100);
@@ -168,6 +192,7 @@ int main(void)
 
 		process_bmp180(&bmp180_sensor, &packet);
 		process_ds18b20(&ds18b20_bus, &packet);
+		process_mpu6050(&packet);
 
 		/* Is it time to send a packet? */
 		if (get_time_since(last_packet_time) > PACKET_DELAY_MS) {

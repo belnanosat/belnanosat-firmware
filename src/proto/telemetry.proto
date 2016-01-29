@@ -16,4 +16,10 @@ message TelemetryPacket {
 	optional uint32 ds18b20_temperature2 = 14;
 	optional uint32 ds18b20_temperature3 = 15;
 	optional uint32 ds18b20_temperature4 = 16;
+	optional int32 acceleration_x = 17;
+	optional int32 acceleration_y = 18;
+	optional int32 acceleration_z = 19;
+	optional int32 gyroscope_x = 20;
+	optional int32 gyroscope_y = 21;
+	optional int32 gyroscope_z = 22;
 }

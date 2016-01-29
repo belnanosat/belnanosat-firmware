@@ -59,6 +59,14 @@ void i2c_write_byte(uint32_t i2c, uint8_t device_address,
 	i2c_send_stop(i2c);
 }
 
+void i2c_write_word(uint32_t i2c, uint8_t device_address,
+                    uint8_t reg_address, uint16_t value) {
+	uint8_t tbuf[2];
+	tbuf[0] = (value >> 8);
+	tbuf[1] = (value & 0xFF);
+	i2c_write_sequence(i2c, device_address, reg_address, tbuf, 2);
+}
+
 uint8_t i2c_read_byte(uint32_t i2c, uint8_t device_address, uint8_t reg_address) {
 	uint32_t reg32 __attribute__((unused));
 	volatile uint8_t res;
@@ -92,6 +100,52 @@ uint8_t i2c_read_byte(uint32_t i2c, uint8_t device_address, uint8_t reg_address)
 	res = I2C_DR(i2c);
 
 	return res;
+}
+
+uint8_t i2c_read_bit(uint32_t i2c, uint8_t device_address,
+                     uint8_t reg_address, uint8_t bit_id) {
+	uint8_t b =  i2c_read_byte(i2c, device_address, reg_address);
+    return b & (1 << bit_id);
+}
+
+void i2c_write_bit(uint32_t i2c, uint8_t device_address,
+                   uint8_t reg_address, uint8_t bit_id, uint8_t data) {
+	uint8_t b = i2c_read_byte(i2c, device_address, reg_address);
+    b = (data != 0) ? (b | (1 << bit_id)) : (b & ~(1 << bit_id));
+    i2c_write_byte(i2c, device_address, reg_address, b);
+}
+
+uint8_t i2c_read_bits(uint32_t i2c, uint8_t devAddr, uint8_t regAddr,
+                      uint8_t bitStart, uint8_t length) {
+    // 01101001 read byte
+    // 76543210 bit numbers
+    //    xxx   args: bitStart=4, length=3
+    //    010   masked
+    //   -> 010 shifted
+    uint8_t b = i2c_read_byte(i2c, devAddr, regAddr);
+    uint8_t mask = ((1 << length) - 1) << (bitStart - length + 1);
+    b &= mask;
+    b >>= (bitStart - length + 1);
+    return b;
+}
+
+void i2c_write_bits(uint32_t i2c, uint8_t devAddr, uint8_t regAddr,
+                    uint8_t bitStart, uint8_t length, uint8_t data) {
+    //      010 value to write
+    // 76543210 bit numbers
+    //    xxx   args: bitStart=4, length=3
+    // 00011100 mask byte
+    // 10101111 original value (sample)
+    // 10100011 original & ~mask
+    // 10101011 masked | value
+    uint8_t b;
+    b = i2c_read_byte(i2c, devAddr, regAddr);
+    uint8_t mask = ((1 << length) - 1) << (bitStart - length + 1);
+    data <<= (bitStart - length + 1); // shift data into correct position
+    data &= mask; // zero all non-important bits in data
+    b &= ~(mask); // zero all important bits in existing byte
+    b |= data; // combine data with existing byte
+    i2c_write_byte(i2c, devAddr, regAddr, b);
 }
 
 uint16_t i2c_read_word(uint32_t i2c, uint8_t device_address,
@@ -177,7 +231,7 @@ void i2c_read_sequence(uint32_t i2c, uint8_t device_address,
 	I2C_CR1(i2c) &= ~I2C_CR1_ACK;
 	buffer[buf_length - 3] = I2C_DR(i2c);
 	while (!(I2C_SR1(i2c) & I2C_SR1_BTF));
-	I2C_CR1(i2c) |= I2C_CR1_STOP;
+	i2c_send_stop(i2c);
 	buffer[buf_length - 2] = I2C_DR(i2c);
 	buffer[buf_length - 1] = I2C_DR(i2c);
 }
