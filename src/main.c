@@ -187,6 +187,7 @@ int main(void)
 
 	TelemetryPacket packet = TelemetryPacket_init_zero;
 	uint32_t last_packet_time = get_time_ms();
+	uint32_t packet_id = 0;
 	while (1) {
 		gpio_toggle(GPIOD, GPIO12);
 
@@ -199,7 +200,8 @@ int main(void)
 			int i;
 			uint8_t checksum;
 
-			++packet.packet_id;
+			packet.packet_id = ++packet_id;
+			packet.timestamp = get_time_ms();
 			packet.status = 0xFFFFFFFF;
 
 			pb_ostream_t stream = pb_ostream_from_buffer(buffer1, sizeof(buffer1));
