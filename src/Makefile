@@ -14,6 +14,7 @@ OBJS += onewire.o
 OBJS += ds18b20.o
 OBJS += smbus.o
 OBJS += mpu6050.o
+OBJS += bh1750.o
 OBJS += proto/telemetry.pb.o
 OBJS += ../nanopb/pb_encode.o
 OBJS += ../nanopb/pb_common.o

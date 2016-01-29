@@ -22,4 +22,8 @@ message TelemetryPacket {
 	optional int32 gyroscope_x = 20;
 	optional int32 gyroscope_y = 21;
 	optional int32 gyroscope_z = 22;
+	optional uint32 sun_sensor1 = 23;
+	optional uint32 sun_sensor2 = 24;
+	optional uint32 sun_sensor3 = 25;
+	optional uint32 sun_sensor4 = 26;
 }

@@ -38,6 +38,7 @@
 #include "ds18b20.h"
 #include "smbus.h"
 #include "mpu6050.h"
+#include "bh1750.h"
 
 //#define LOG_TO_EEPROM
 #define PACKET_DELAY_MS 500
@@ -131,6 +132,21 @@ static void process_mpu6050(TelemetryPacket *packet) {
 	last_mpu6050_conversion = get_time_ms();
 }
 
+static void process_bh1750(BH1750 *sensor, TelemetryPacket *packet) {
+	if (!bh1750_is_conversion_finished(sensor)) return;
+
+	packet->has_sun_sensor1 = true;
+	packet->has_sun_sensor2 = true;
+	packet->has_sun_sensor3 = true;
+	packet->has_sun_sensor4 = true;
+	packet->sun_sensor1 = bh1750_read(sensor, 0);
+	packet->sun_sensor2 = bh1750_read(sensor, 1);
+	packet->sun_sensor3 = bh1750_read(sensor, 2);
+	packet->sun_sensor4 = bh1750_read(sensor, 3);
+
+	sensor->conv_start_time = get_time_ms();
+}
+
 // NOTE: This function assumees that length <= 255
 static void stuff_data(uint8_t *input_data, int length, uint8_t *output_data) {
 	uint8_t *input_data_end = input_data + length;
@@ -156,6 +172,7 @@ int main(void)
 	BMP180 bmp180_sensor;
 	EEPROM eeprom;
 	DS18B20Bus ds18b20_bus;
+	BH1750 bh1750;
 	clock_setup();
 	gpio_setup();
 	systick_setup();
@@ -170,6 +187,7 @@ int main(void)
 	msleep(100);
 
 	bmp180_setup(&bmp180_sensor, I2C2, BMP180_MODE_ULTRA_HIGHRES);
+	bh1750_setup(&bh1750, I2C2);
 //	EEPROM_setup(&eeprom, I2C2);
 	msleep(1000);
 
@@ -194,6 +212,7 @@ int main(void)
 		process_bmp180(&bmp180_sensor, &packet);
 		process_ds18b20(&ds18b20_bus, &packet);
 		process_mpu6050(&packet);
+		process_bh1750(&bh1750, &packet);
 
 		/* Is it time to send a packet? */
 		if (get_time_since(last_packet_time) > PACKET_DELAY_MS) {

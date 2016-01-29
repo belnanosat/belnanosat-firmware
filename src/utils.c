@@ -1,6 +1,7 @@
 #include "utils.h"
 
 #include <libopencm3/cm3/systick.h>
+#include <libopencm3/cm3/nvic.h>
 
 volatile uint32_t system_microseconds;
 

@@ -34,4 +34,9 @@ void i2c_write_sequence(uint32_t i2c, uint8_t device_address,
 uint8_t i2c_wread_byte(uint32_t i2c, uint8_t device_address,
                        uint16_t reg_address);
 
+
+// These functions are used for BH1750
+void i2c_write_byte_raw(uint32_t i2c, uint8_t device_address, uint8_t data);
+uint16_t i2c_read_word_raw(uint32_t i2c, uint8_t device_address);
+
 #endif
