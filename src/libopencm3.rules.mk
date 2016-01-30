@@ -96,7 +96,7 @@ CXXFLAGS	+= -fno-common -ffunction-sections -fdata-sections
 
 CPPFLAGS	+= -MD
 CPPFLAGS	+= -Wall -Wundef
-CPPFLAGS	+= -I$(INCLUDE_DIR) $(DEFS) -I../nanopb/
+CPPFLAGS	+= -I$(INCLUDE_DIR) $(DEFS) -I../nanopb/ -Ichan_fat/src/
 
 ###############################################################################
 # Linker flags

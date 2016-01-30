@@ -18,6 +18,7 @@
  */
 
 #include <stdio.h>
+#include <math.h>
 
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/gpio.h>
@@ -38,10 +39,19 @@
 #include "ds18b20.h"
 #include "smbus.h"
 #include "mpu6050.h"
+#include "hmc5883l.h"
 #include "bh1750.h"
+#include "ff.h"
+#include "madgwick_ahrs.h"
 
 //#define LOG_TO_EEPROM
 #define PACKET_DELAY_MS 500
+
+float fax, fay, faz, fgx, fgy, fgz;
+float fmx, fmy, fmz;
+bool has_read_mpu6050 = false;
+bool has_read_hmc5883l = false;
+int16_t gx_offset = 0, gy_offset = 0, gz_offset = 0;
 
 /* Set up a timer to create 1mS ticks. */
 static void systick_setup(void)
@@ -109,9 +119,11 @@ static void process_bmp180(BMP180 *sensor, TelemetryPacket *packet) {
 }
 
 uint32_t last_mpu6050_conversion;
+uint32_t last_hmc5883l_conversion;
+uint32_t last_madgwick;
 
 static void process_mpu6050(TelemetryPacket *packet) {
-	if (get_time_since(last_mpu6050_conversion) < 100) return;
+	if (get_time_since(last_mpu6050_conversion) < 10) return;
 
 	int16_t ax, ay, az, gx, gy, gz;
 	MPU6050_getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
@@ -129,7 +141,59 @@ static void process_mpu6050(TelemetryPacket *packet) {
 	packet->gyroscope_y = gy;
 	packet->gyroscope_z = gz;
 
+	gx -= gx_offset;
+	gy -= gy_offset;
+	gz -= gz_offset;
+	fax = ax / 16384.0f;
+	fay = ay / 16384.0f;
+	faz = az / 16384.0f;
+	float ratio = (32767.0 / 250.0f) * 180.0f / M_PI;
+	fgx = gx / ratio;
+	fgy = gy / ratio;
+	fgz = gz / ratio;
+
 	last_mpu6050_conversion = get_time_ms();
+	has_read_mpu6050 = true;
+}
+
+static void process_hmc5883l(TelemetryPacket *packet) {
+	if (get_time_since(last_hmc5883l_conversion) < 20) return;
+
+	int16_t mx, my, mz;
+	HMC5883L_GetHeading(&mx, &my, &mz);
+
+	packet->has_magnetometer_x = true;
+	packet->has_magnetometer_y = true;
+	packet->has_magnetometer_z = true;
+
+	packet->magnetometer_x = mx;
+	packet->magnetometer_y = my;
+	packet->magnetometer_z = mz;
+
+	float mratio = 0.92f / 1000.0f;
+	fmx = mx * mratio;
+	fmy = my * mratio;
+	fmz = mz * mratio;
+
+	last_hmc5883l_conversion = get_time_ms();
+	has_read_hmc5883l = true;
+}
+
+static void process_madgwick(TelemetryPacket *packet) {
+	if (get_time_since(last_madgwick) < 10) return;
+
+	if (!has_read_mpu6050 || !has_read_hmc5883l) return;
+
+	MadgwickAHRSupdate(fgx, fgy, fgz, fax, fay, faz, fmx, fmy, fmz);
+
+	packet->has_quaternion0 = true;
+	packet->has_quaternion1 = true;
+	packet->has_quaternion2 = true;
+	packet->has_quaternion3 = true;
+	packet->quaternion0 = q0;
+	packet->quaternion1 = q1;
+	packet->quaternion2 = q2;
+	packet->quaternion3 = q3;
 }
 
 static void process_bh1750(BH1750 *sensor, TelemetryPacket *packet) {
@@ -167,6 +231,22 @@ static void stuff_data(uint8_t *input_data, int length, uint8_t *output_data) {
 	*output_data = 0;
 }
 
+DWORD get_fattime (void) {
+	DWORD res;
+//	RTC_t rtc;
+
+//	rtc_gettime( &rtc );
+
+	res =  (((DWORD)1980 - 1980) << 25)
+			| ((DWORD)1 << 21)
+			| ((DWORD)1 << 16)
+			| (WORD)(1 << 11)
+			| (WORD)(1 << 5)
+			| (WORD)(1 >> 1);
+
+	return res;
+}
+
 int main(void)
 {
 	BMP180 bmp180_sensor;
@@ -181,16 +261,41 @@ int main(void)
 	i2c_setup();
 //	smbus_setup();
 	MPU6050_initialize();
+	HMC5883L_Init();
 	last_mpu6050_conversion = get_time_ms();
+	last_hmc5883l_conversion = get_time_ms();
+	last_madgwick = get_time_ms();
+	/* Init Gyroscope offsets */
+	int i;
+	for(i = 0; i < 32; i ++) {
+		gx_offset += MPU6050_getRotationX();
+		gy_offset += MPU6050_getRotationY();
+		gz_offset += MPU6050_getRotationZ();
+		msleep(100);
+	}
+	gx_offset >>= 5;
+	gy_offset >>= 5;
+	gz_offset >>= 5;
+
 
 	// Wait for initialization of all external sensors
 	msleep(100);
 
 	bmp180_setup(&bmp180_sensor, I2C2, BMP180_MODE_ULTRA_HIGHRES);
-	bh1750_setup(&bh1750, I2C2);
+//	bh1750_setup(&bh1750, I2C2);
 //	EEPROM_setup(&eeprom, I2C2);
 	msleep(1000);
 
+	FATFS fatfs;
+	FRESULT fr;
+	FIL file;
+	fr = f_mount(0, &fatfs);
+	if (fr == FR_OK) {
+		fr = f_open(&file, "tmp.txt", FA_READ);
+		if (fr == FR_OK) {
+			printf("works!");
+		}
+	}
 	/* Set two LEDs for wigwag effect when toggling. */
 	gpio_set(GPIOD, GPIO12);
 
@@ -212,11 +317,12 @@ int main(void)
 		process_bmp180(&bmp180_sensor, &packet);
 		process_ds18b20(&ds18b20_bus, &packet);
 		process_mpu6050(&packet);
-		process_bh1750(&bh1750, &packet);
+		process_hmc5883l(&packet);
+		process_madgwick(&packet);
+//		process_bh1750(&bh1750, &packet);
 
 		/* Is it time to send a packet? */
 		if (get_time_since(last_packet_time) > PACKET_DELAY_MS) {
-			int i;
 			uint8_t checksum;
 
 			packet.packet_id = ++packet_id;
