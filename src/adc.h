@@ -4,6 +4,6 @@
 #include <stdint.h>
 
 extern void adc_setup(void);
-extern uint16_t adc_read(void);
+extern void adc_read(uint16_t *res1, uint16_t *res2);
 
 #endif

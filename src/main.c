@@ -23,6 +23,7 @@
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/gpio.h>
 #include <libopencm3/stm32/i2c.h>
+#include <libopencm3/stm32/iwdg.h>
 #include <libopencm3/cm3/nvic.h>
 #include <libopencm3/cm3/systick.h>
 
@@ -121,6 +122,8 @@ static void process_bmp180(BMP180 *sensor, TelemetryPacket *packet) {
 uint32_t last_mpu6050_conversion;
 uint32_t last_hmc5883l_conversion;
 uint32_t last_madgwick;
+uint32_t last_ozone_read;
+uint32_t last_uv_read;
 
 static void process_mpu6050(TelemetryPacket *packet) {
 	if (get_time_since(last_mpu6050_conversion) < 10) return;
@@ -202,13 +205,27 @@ static void process_bh1750(BH1750 *sensor, TelemetryPacket *packet) {
 	packet->has_sun_sensor1 = true;
 	packet->has_sun_sensor2 = true;
 	packet->has_sun_sensor3 = true;
-	packet->has_sun_sensor4 = true;
+//	packet->has_sun_sensor4 = true;
 	packet->sun_sensor1 = bh1750_read(sensor, 0);
 	packet->sun_sensor2 = bh1750_read(sensor, 1);
 	packet->sun_sensor3 = bh1750_read(sensor, 2);
-	packet->sun_sensor4 = bh1750_read(sensor, 3);
+//	packet->sun_sensor4 = bh1750_read(sensor, 3);
 
 	sensor->conv_start_time = get_time_ms();
+}
+
+static void process_ozone_and_uv(TelemetryPacket *packet) {
+	if (get_time_since(last_ozone_read) < 300) return;
+
+	uint16_t ozone, uv_light;
+	adc_read(&ozone, &uv_light);
+	packet->has_ozone = true;
+	packet->ozone = ozone;
+
+	packet->has_uv_light = true;
+	packet->uv_light = uv_light;
+
+	last_ozone_read = get_time_ms();
 }
 
 // NOTE: This function assumees that length <= 255
@@ -257,8 +274,9 @@ int main(void)
 	gpio_setup();
 	systick_setup();
 	usart_setup();
-//	adc_setup();
+	adc_setup();
 	i2c_setup();
+	msleep(1000);
 //	smbus_setup();
 	MPU6050_initialize();
 	HMC5883L_Init();
@@ -277,25 +295,28 @@ int main(void)
 	gy_offset >>= 5;
 	gz_offset >>= 5;
 
+	last_ozone_read = get_time_ms();
 
 	// Wait for initialization of all external sensors
 	msleep(100);
 
 	bmp180_setup(&bmp180_sensor, I2C2, BMP180_MODE_ULTRA_HIGHRES);
-//	bh1750_setup(&bh1750, I2C2);
+	bh1750_setup(&bh1750, I2C3);
 //	EEPROM_setup(&eeprom, I2C2);
-	msleep(1000);
 
-	FATFS fatfs;
-	FRESULT fr;
-	FIL file;
-	fr = f_mount(0, &fatfs);
-	if (fr == FR_OK) {
-		fr = f_open(&file, "tmp.txt", FA_READ);
-		if (fr == FR_OK) {
-			printf("works!");
-		}
-	}
+	iwdg_set_period_ms(2000);
+	iwdg_start();
+
+	/* FATFS fatfs; */
+	/* FRESULT fr; */
+	/* FIL file; */
+	/* fr = f_mount(0, &fatfs); */
+	/* if (fr == FR_OK) { */
+	/* 	fr = f_open(&file, "tmp.txt", FA_READ); */
+	/* 	if (fr == FR_OK) { */
+	/* 		printf("works!"); */
+	/* 	} */
+	/* } */
 	/* Set two LEDs for wigwag effect when toggling. */
 	gpio_set(GPIOD, GPIO12);
 
@@ -313,13 +334,14 @@ int main(void)
 	uint32_t packet_id = 0;
 	while (1) {
 		gpio_toggle(GPIOD, GPIO12);
-
+		iwdg_reset();
 		process_bmp180(&bmp180_sensor, &packet);
 		process_ds18b20(&ds18b20_bus, &packet);
 		process_mpu6050(&packet);
 		process_hmc5883l(&packet);
 		process_madgwick(&packet);
-//		process_bh1750(&bh1750, &packet);
+		process_ozone_and_uv(&packet);
+		process_bh1750(&bh1750, &packet);
 
 		/* Is it time to send a packet? */
 		if (get_time_since(last_packet_time) > PACKET_DELAY_MS) {

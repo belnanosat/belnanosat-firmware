@@ -59,11 +59,13 @@ void bh1750_setup(BH1750 *sensor, uint32_t i2c) {
 
 uint16_t bh1750_read(BH1750 *sensor, int id) {
 	gpio_set(BH1750_GPIO, gpios_map[id]);
+	msleep(1);
 	uint16_t res = i2c_read_word_raw(sensor->i2c, BH1750_ADDRESS);
 	gpio_clear(BH1750_GPIO, gpios_map[id]);
+	msleep(1);
 	return res;
 }
 
 bool bh1750_is_conversion_finished(BH1750 *sensor) {
-	return get_time_since(sensor->conv_start_time) >= 180;
+	return get_time_since(sensor->conv_start_time) >= 400;
 }

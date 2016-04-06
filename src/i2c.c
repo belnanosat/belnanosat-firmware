@@ -36,6 +36,31 @@ void i2c_setup(void) {
 	i2c_set_ccr(I2C2, 3);
 
 	i2c_peripheral_enable(I2C2);
+
+	rcc_periph_clock_enable(RCC_GPIOC | RCC_GPIOA);
+
+	gpio_mode_setup(GPIOA, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO8);
+	gpio_mode_setup(GPIOC, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO9);
+	gpio_set_output_options(GPIOA, GPIO_OTYPE_OD, GPIO_OSPEED_50MHZ,
+	                        GPIO8);
+	gpio_set_output_options(GPIOC, GPIO_OTYPE_OD, GPIO_OSPEED_50MHZ,
+	                        GPIO9);
+	gpio_set_af(GPIOA, GPIO_AF4, GPIO8);
+	gpio_set_af(GPIOC, GPIO_AF4, GPIO9);
+
+	rcc_periph_clock_enable(RCC_I2C3);
+	i2c_reset(I2C3);
+	i2c_peripheral_disable(I2C3);
+
+	// rcc_apb1_frequency = 42MHz
+	i2c_set_clock_frequency(I2C3, rcc_apb1_frequency/1000000);
+	i2c_set_fast_mode(I2C3);
+	i2c_set_dutycycle(I2C3, I2C_CCR_DUTY_16_DIV_9);
+
+	// For APB1 PCLK1 = 42MHz => I2C speed = 400kHz
+	i2c_set_ccr(I2C3, 3);
+
+	i2c_peripheral_enable(I2C3);
 }
 
 void i2c_write_byte(uint32_t i2c, uint8_t device_address,

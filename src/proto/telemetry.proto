@@ -31,4 +31,6 @@ message TelemetryPacket {
 	optional float quaternion1 = 29;
 	optional float quaternion2 = 30;
 	optional float quaternion3 = 31;
+	optional int32 ozone = 32;
+	optional int32 uv_light = 33;
 }
