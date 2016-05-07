@@ -18,13 +18,14 @@ OBJS += smbus.o
 OBJS += mpu6050.o
 OBJS += hmc5883l.o
 OBJS += bh1750.o
-OBJS += sdio.o
+OBJS += spi.o
+OBJS += sdcard.o
 OBJS += madgwick_ahrs.o
 OBJS += proto/telemetry.pb.o
 OBJS += ../nanopb/pb_encode.o
 OBJS += ../nanopb/pb_common.o
 
-OBJS += ff.o
+#OBJS += ff.o
 
 PROTOBUFFERS += telemetry.pb
 

@@ -1,7 +1,7 @@
 /*
  * This file is part of belnanosat project.
  *
- * Copyright (C) 2015 Uladzislau Paulovich <selatnick@gmail.com>
+ * Copyright (C) 2016 Uladzislau Paulovich <selatnick@gmail.com>
  *
  * belnanosat is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,19 +17,11 @@
  * along with belnanosat.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef USART_H
-#define USART_H
+#ifndef SDCARD_H
+#define SDCARD_H
 
-#define USART_ID USART3
-#define USART_RCC_ID RCC_USART3
-#define USART_PORT GPIOB
-#define USART_RCC_PORT RCC_GPIOB
-#define USART_TX GPIO10
-#define USART_RX GPIO11
-#define USART_BAUD_RATE 38400
+#include <stdint.h>
 
-#define USART_AUTO_ECHO
-
-extern void usart_setup(void);
+extern uint8_t sdcard_setup(void);
 
 #endif
