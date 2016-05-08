@@ -17,13 +17,13 @@
  * along with belnanosat.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef SDCARD_H
-#define SDCARD_H
+
+#ifndef LOG_H
+#define LOG_H
 
 #include <stdint.h>
 
-extern uint8_t sdcard_setup(void);
-extern void sdcard_single_block_read(uint32_t address, uint8_t *block);
-extern void sdcard_single_block_write(uint32_t address, uint8_t *block);
+extern void log_setup(void);
+extern void log_write(const uint8_t* data, uint32_t len);
 
 #endif

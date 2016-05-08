@@ -20,6 +20,7 @@ OBJS += hmc5883l.o
 OBJS += bh1750.o
 OBJS += spi.o
 OBJS += sdcard.o
+OBJS += log.o
 OBJS += madgwick_ahrs.o
 OBJS += proto/telemetry.pb.o
 OBJS += ../nanopb/pb_encode.o

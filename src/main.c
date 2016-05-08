@@ -46,7 +46,7 @@
 #include "madgwick_ahrs.h"
 #include "spi.h"
 #include "sdcard.h"
-
+#include "log.h"
 
 #define CHECK_SETUP(interface)  do{\
 		printf("Setting up " #interface ".......");\
@@ -59,7 +59,7 @@
 
 
 //#define LOG_TO_EEPROM
-#define PACKET_DELAY_MS 500
+#define PACKET_DELAY_MS 100
 
 float fax, fay, faz, fgx, fgy, fgz;
 float fmx, fmy, fmz;
@@ -89,7 +89,7 @@ static void clock_setup(void)
 static void gpio_setup(void)
 {
 	/* Set GPIO11-15 (in GPIO port D) to 'output push-pull'. */
-	gpio_mode_setup(GPIOD, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO12);
+	gpio_mode_setup(GPIOD, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO12 | GPIO15);
 }
 
 static void process_ds18b20(DS18B20Bus *bus, TelemetryPacket *packet) {
@@ -269,36 +269,39 @@ int main(void) {
 	clock_setup();
 	gpio_setup();
 	systick_setup();
-	usart_setup();
+//	usart_setup();
 	spi_setup();
-	CHECK_SETUP(sdcard);
+	sdcard_setup();
+//	CHECK_SETUP(sdcard);
+	log_setup();
+//	log_write("Hello from belnanosat!\n!!!!!", 25);
 	/* adc_setup(); */
-	/* i2c_setup(); */
-	/* msleep(1000); */
+	i2c_setup();
+	msleep(1000);
 //	smbus_setup();
-/* 	MPU6050_initialize(); */
-/* 	HMC5883L_Init(); */
-/* 	last_mpu6050_conversion = get_time_ms(); */
-/* 	last_hmc5883l_conversion = get_time_ms(); */
-/* 	last_madgwick = get_time_ms(); */
-/* 	/\* Init Gyroscope offsets *\/ */
-/* 	int i; */
-/* 	for(i = 0; i < 32; i ++) { */
-/* 		gx_offset += MPU6050_getRotationX(); */
-/* 		gy_offset += MPU6050_getRotationY(); */
-/* 		gz_offset += MPU6050_getRotationZ(); */
-/* 		msleep(100); */
-/* 	} */
-/* 	gx_offset >>= 5; */
-/* 	gy_offset >>= 5; */
-/* 	gz_offset >>= 5; */
+	MPU6050_initialize();
+	HMC5883L_Init();
+	last_mpu6050_conversion = get_time_ms();
+	last_hmc5883l_conversion = get_time_ms();
+	last_madgwick = get_time_ms();
+	// Init Gyroscope offsets
+	int i;
+	for(i = 0; i < 32; i ++) {
+		gx_offset += MPU6050_getRotationX();
+		gy_offset += MPU6050_getRotationY();
+		gz_offset += MPU6050_getRotationZ();
+		msleep(100);
+	}
+	gx_offset >>= 5;
+	gy_offset >>= 5;
+	gz_offset >>= 5;
 
 /* 	last_ozone_read = get_time_ms(); */
 
 /* 	// Wait for initialization of all external sensors */
 /* 	msleep(100); */
 
-/* 	bmp180_setup(&bmp180_sensor, I2C2, BMP180_MODE_ULTRA_HIGHRES); */
+	bmp180_setup(&bmp180_sensor, I2C2, BMP180_MODE_ULTRA_HIGHRES);
 /* 	bh1750_setup(&bh1750, I2C3); */
 /* //	EEPROM_setup(&eeprom, I2C2); */
 
@@ -307,6 +310,7 @@ int main(void) {
 
 	/* Set two LEDs for wigwag effect when toggling. */
 	gpio_set(GPIOD, GPIO12);
+	gpio_clear(GPIOD, GPIO15);
 
 	static uint8_t buffer1[256];
 	static uint8_t buffer2[256];
@@ -323,53 +327,53 @@ int main(void) {
 	msleep(1000);
 	int cid = 0;
 	uint8_t pid = 0;
-	printf("Initiating everything!\n\r");
 	while (1) {
-		gpio_toggle(GPIOD, GPIO12);
 
-		msleep(1000);
 		/* iwdg_reset(); */
-/* 		process_bmp180(&bmp180_sensor, &packet); */
+		process_bmp180(&bmp180_sensor, &packet);
 /* 		process_ds18b20(&ds18b20_bus, &packet); */
-/* 		process_mpu6050(&packet); */
-/* 		process_hmc5883l(&packet); */
-/* 		process_madgwick(&packet); */
+		process_mpu6050(&packet);
+		process_hmc5883l(&packet);
+		process_madgwick(&packet);
 /* 		process_ozone_and_uv(&packet); */
 /* 		process_bh1750(&bh1750, &packet); */
 
-/* 		/\* Is it time to send a packet? *\/ */
-/* 		if (get_time_since(last_packet_time) > PACKET_DELAY_MS) { */
-/* 			uint8_t checksum; */
+		/* Is it time to send a packet? */
+		if (get_time_since(last_packet_time) > PACKET_DELAY_MS) {
+			gpio_toggle(GPIOD, GPIO12);
+			uint8_t checksum;
 
-/* 			packet.packet_id = ++packet_id; */
-/* 			packet.timestamp = get_time_ms(); */
-/* 			packet.status = 0xFFFFFFFF; */
+			packet.packet_id = ++packet_id;
+			packet.timestamp = get_time_ms();
+			packet.status = 0xFFFFFFFF;
 
-/* 			pb_ostream_t stream = pb_ostream_from_buffer(buffer1, sizeof(buffer1)); */
-/* 			bool status = pb_encode(&stream, TelemetryPacket_fields, &packet); */
+			pb_ostream_t stream = pb_ostream_from_buffer(buffer1, sizeof(buffer1));
+			bool status = pb_encode(&stream, TelemetryPacket_fields, &packet);
 
-/* 			checksum = 0; */
-/* 			for (i = 0; i < stream.bytes_written; ++i) { */
-/* 				checksum ^= buffer1[i]; */
-/* 			} */
-/* 			buffer1[stream.bytes_written] = checksum; */
+			checksum = 0;
+			for (i = 0; i < stream.bytes_written; ++i) {
+				checksum ^= buffer1[i];
+			}
+			buffer1[stream.bytes_written] = checksum;
 
-/* 			stuff_data(buffer1, stream.bytes_written + 1, buffer2); */
+			stuff_data(buffer1, stream.bytes_written + 1, buffer2);
 
-/* #ifdef LOG_TO_EEPROM */
-/* 			EEPROM_write(&eeprom, buffer2, stream.bytes_written); */
-/* #endif */
+#ifdef LOG_TO_EEPROM
+			EEPROM_write(&eeprom, buffer2, stream.bytes_written);
+#endif
 
-/* 			for (i = 0; i < stream.bytes_written + 3; ++i) { */
-/* 				putc(buffer2[i], stdout); */
-/* 			} */
-/* 			fflush(stdout); */
+			log_write(buffer2, stream.bytes_written + 3);
 
-/* 			last_packet_time = get_time_ms(); */
+			/* for (i = 0; i < stream.bytes_written + 3; ++i) { */
+			/* 	putc(buffer2[i], stdout); */
+			/* } */
+			/* fflush(stdout); */
 
-/* 			/\* Clear packet *\/ */
-/* 			packet = (TelemetryPacket)TelemetryPacket_init_zero; */
-/* 		} */
+			last_packet_time = get_time_ms();
+
+			/* Clear packet */
+			packet = (TelemetryPacket)TelemetryPacket_init_zero;
+		}
 	}
 
 	return 0;

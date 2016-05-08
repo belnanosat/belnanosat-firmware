@@ -99,7 +99,6 @@ uint8_t sdcard_setup(void) {
 	if ((((uint16_t)buff[2] << 8) | buff[3]) != SDC_V2_CMD8_CORRECT_RESPONSE) {
 		return 0;
 	}
-
 	succesfull_init = 0;
 	for (i = 0; i < CARD_INIT_TIMEOUT; ++i) {
 		r1 = send_command(55, 0, 0);
@@ -113,7 +112,100 @@ uint8_t sdcard_setup(void) {
 		}
 	}
 
+	if (!succesfull_init) {
+		for (i = 0; i < CARD_INIT_TIMEOUT; ++i) {
+			r1 = send_command(1, 0, 0);
+			if (r1 == 0x00) {
+				succesfull_init = 1;
+				break;
+			}
+		}
+	}
+
+	/* r1 = send_command_without_disabling(58, 0, 0); */
+	/* printf("CMD58 perhaps works!\r\n"); */
+	/* if (r1 != 0) { */
+	/* 	printf("%d\r\n", (int)r1); */
+	/* 	return 0; */
+	/* } */
+	/* printf("CMD58 works!\r\n"); */
+	/* buff[0] = spi_write_and_read(DUMMY_BYTE); */
+	/* buff[1] = spi_write_and_read(DUMMY_BYTE); */
+	/* buff[2] = spi_write_and_read(DUMMY_BYTE); */
+	/* buff[3] = spi_write_and_read(DUMMY_BYTE); */
+	/* card_disable(); */
+	/* spi_write_and_read(DUMMY_BYTE); */
+
+	/* printf("Flag: %d\r\n", (int)buff[0]); */
+
+	/* r1 = send_command(16, 0x200, 0); */
+
+	/* printf("Response: %d\r\n", (int)r1); */
+
 	return succesfull_init;
+}
+
+void sdcard_single_block_read(uint32_t address, uint8_t *block) {
+	uint8_t r1 = send_command_without_disabling(17, address, 0);
+	uint32_t i;
+
+	if (r1 != 0x00) {
+		printf("Read Error1: %d\r\n", (int)r1);
+		return;
+	}
+
+	for (i = 0; i < 4000; ++i) {
+		r1 = spi_write_and_read(DUMMY_BYTE);
+		if (r1 == 0xFE) {
+			break;
+		}
+	}
+
+	if (r1 != 0xFE) {
+		printf("Read Error2: %d\r\n", (int)r1);
+		return;
+	}
+
+	for (i = 0; i < 512; ++i) {
+		block[i] = spi_write_and_read(DUMMY_BYTE);
+	}
+
+	// Read CRC
+	spi_write_and_read(DUMMY_BYTE);
+	spi_write_and_read(DUMMY_BYTE);
+
+	card_disable();
+	spi_write_and_read(DUMMY_BYTE);
+}
+
+void sdcard_single_block_write(uint32_t address, uint8_t *block) {
+	uint8_t r1 = send_command_without_disabling(24, address, 0);
+	uint32_t i;
+
+	if (r1 != 0x00) {
+		printf("Write Error1: %d\r\n", (int)r1);
+		return;
+	}
+
+	// Wait for 3 bytes before sending data packet
+	spi_write_and_read(DUMMY_BYTE);
+	spi_write_and_read(DUMMY_BYTE);
+	spi_write_and_read(DUMMY_BYTE);
+
+	// Start data packet transmission
+	spi_write_and_read(0xFE);
+	for (i = 0; i < 512; ++i) {
+		spi_write_and_read(block[i]);
+	}
+
+	// Card doesn't check CRC, so we can send some constant value
+	spi_write_and_read(DUMMY_BYTE);
+	spi_write_and_read(DUMMY_BYTE);
+
+	while ((r1 = spi_write_and_read(DUMMY_BYTE)) == 0xFF);
+
+	card_disable();
+	spi_write_and_read(DUMMY_BYTE);
 }
 
 uint8_t send_command(uint8_t cmd, uint32_t arg, uint8_t crc) {
