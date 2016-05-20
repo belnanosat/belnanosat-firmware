@@ -28,13 +28,12 @@
 
 static uint8_t buff[512];
 
-static uint32_t cur_block_id = (0x3acc00 >> 9) + 1000 - 863;
+static uint32_t cur_block_id = 0x7740;
 static uint32_t cur_block_shift = 0;
 
 // TODO: search for a place to append log. We don't want to override
 // existing datax
 void log_setup(void) {
-
 }
 
 void log_write(const uint8_t* data, uint32_t len) {
@@ -45,7 +44,7 @@ void log_write(const uint8_t* data, uint32_t len) {
 		gpio_toggle(GPIOD, GPIO15);
 
 		memcpy(buff + cur_block_shift, data, 512 - cur_block_shift);
-		sdcard_single_block_write(cur_block_id << 9, buff);
+		sdcard_single_block_write(cur_block_id, buff);
 
 		++cur_block_id;
 		memset(buff, 0, 512);

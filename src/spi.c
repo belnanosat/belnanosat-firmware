@@ -22,7 +22,7 @@ void spi_setup() {
 
 	spi_reset(SPI_ID);
 
-	spi_init_master(SPI_ID, SPI_CR1_BAUDRATE_FPCLK_DIV_256, 0,//SPI_CR1_CPOL_CLK_TO_0_WHEN_IDLE,
+	spi_init_master(SPI_ID, SPI_CR1_BAUDRATE_FPCLK_DIV_64, 0,//SPI_CR1_CPOL_CLK_TO_0_WHEN_IDLE,
 	                0,//SPI_CR1_CPHA_CLK_TRANSITION_1,
 	                SPI_CR1_DFF_8BIT, SPI_CR1_MSBFIRST);
 	spi_set_full_duplex_mode(SPI_ID);
@@ -37,9 +37,19 @@ void spi_setup() {
 
 
 uint8_t spi_write_and_read(uint8_t data) {
-	while (!(SPI_SR(SPI_ID) & SPI_SR_TXE));
+	uint16_t i = 0;
+	while (!(SPI_SR(SPI_ID) & SPI_SR_TXE) && i < 10000) ++i;
+	if (i == 10000) {
+		return 0xFF;
+	}
+
 	SPI_DR(SPI_ID) = data;
 
-	while (!(SPI_SR(SPI_ID) & SPI_SR_RXNE));
-	return SPI_DR(SPI_ID);
+	i = 0;
+	while (!(SPI_SR(SPI_ID) & SPI_SR_RXNE) && i < 10000) ++i;
+	if (i == 10000) {
+		return 0xFF;
+	} else {
+		return SPI_DR(SPI_ID);
+	}
 }

@@ -45,6 +45,9 @@
 #define R1_ADDRESS_ERROR             (1 << 5)
 #define R1_PARAMETER_ERROR           (1 << 6)
 
+
+#define STATUS_DATA_ACCEPTED        0b010
+
 #define card_enable()               gpio_clear(SPI_PORT, SPI_NSS);
 #define card_disable()              gpio_set(SPI_PORT, SPI_NSS);
 
@@ -109,7 +112,13 @@ uint8_t sdcard_setup(void) {
 		if (r1 == 0x00) {
 			succesfull_init = 1;
 			break;
+		} else if (r1 != 0x01) {
+			break;
 		}
+	}
+
+	if (r1 != 0x00) {
+		printf("CMD55 error occured: %d\r\n", (int)r1);
 	}
 
 	if (!succesfull_init) {
@@ -138,9 +147,9 @@ uint8_t sdcard_setup(void) {
 
 	/* printf("Flag: %d\r\n", (int)buff[0]); */
 
-	/* r1 = send_command(16, 0x200, 0); */
+	r1 = send_command(16, 0x200, 0);
 
-	/* printf("Response: %d\r\n", (int)r1); */
+	printf("Response: %d\r\n", (int)r1);
 
 	return succesfull_init;
 }
@@ -171,8 +180,10 @@ void sdcard_single_block_read(uint32_t address, uint8_t *block) {
 	}
 
 	// Read CRC
-	spi_write_and_read(DUMMY_BYTE);
-	spi_write_and_read(DUMMY_BYTE);
+	uint16_t crc = 0;
+	crc = spi_write_and_read(DUMMY_BYTE);
+	crc <<= 8;
+	crc |= spi_write_and_read(DUMMY_BYTE);
 
 	card_disable();
 	spi_write_and_read(DUMMY_BYTE);
@@ -202,10 +213,121 @@ void sdcard_single_block_write(uint32_t address, uint8_t *block) {
 	spi_write_and_read(DUMMY_BYTE);
 	spi_write_and_read(DUMMY_BYTE);
 
-	while ((r1 = spi_write_and_read(DUMMY_BYTE)) == 0xFF);
+	// We should wait for a Data Response byte
+	i = 0;
+	while ((r1 = spi_write_and_read(DUMMY_BYTE)) == 0xFF && i < 10000) ++i;
+
+	if (i == 10000) {
+		card_disable();
+		spi_write_and_read(0xFF);
+		return;
+	}
+
+	// Status "010" means that data is accepted
+	if (((r1 & 0xE) >> 1) != STATUS_DATA_ACCEPTED) {
+		printf("Write error2: %x\r\n", r1);
+		return;
+	}
+
+	// During the writing operation sd card holds data line low
+	i = 0;
+	while (spi_write_and_read(DUMMY_BYTE) != 0xFF) ++i;
 
 	card_disable();
 	spi_write_and_read(DUMMY_BYTE);
+
+	r1 = send_command_without_disabling(13, 0, 0);
+	uint8_t r2 = spi_write_and_read(DUMMY_BYTE);
+
+	if (r1 || r2) {
+		printf("CMD13 Error!\r\n");
+	}
+	card_disable();
+	spi_write_and_read(DUMMY_BYTE);
+}
+
+int write_started = 0;
+int blockw_id = 0;
+
+void sdcard_multiple_block_write(uint32_t address, uint8_t *block) {
+	if (write_started) {
+		uint8_t r1;
+		uint32_t i;
+		// Start data packet transmission
+		spi_write_and_read(0xFE);
+		for (i = 0; i < 512; ++i) {
+			spi_write_and_read(block[i]);
+		}
+
+		// Card doesn't check CRC, so we can send some constant value
+		spi_write_and_read(DUMMY_BYTE);
+		spi_write_and_read(DUMMY_BYTE);
+
+		// We should wait for a Data Response byte
+		i = 0;
+		while ((r1 = spi_write_and_read(DUMMY_BYTE)) == 0xFF && i < 100000);
+
+		if (i == 100000) {
+			card_disable();
+			spi_write_and_read(0xFF);
+			return;
+		}
+
+		// Status "010" means that data is accepted
+		/* if (((r1 & 0xE) >> 1) != STATUS_DATA_ACCEPTED) { */
+		/* 	printf("Write error3: %x\r\n", r1); */
+		/* 	return; */
+		/* } */
+
+		// During the writing operation sd card holds data line low
+		i = 0;
+		while (spi_write_and_read(DUMMY_BYTE) != 0xFF && i < 1000) ++i;
+
+		printf("%d One more write took: %d\r\n", blockw_id++, (int)i);
+	} else {
+		// set earse block count
+		uint8_t r1 = send_command(55, 0, 0);
+		r1 = send_command(23, 0x10000, 0);
+
+		write_started = 1;
+		r1 = send_command_without_disabling(25, address, 0);
+		uint32_t i;
+
+		if (r1 != 0x00) {
+			printf("Write Error1: %d\r\n", (int)r1);
+			return;
+		}
+
+		// Wait for 3 bytes before sending data packet
+		spi_write_and_read(DUMMY_BYTE);
+		spi_write_and_read(DUMMY_BYTE);
+		spi_write_and_read(DUMMY_BYTE);
+
+
+		// Start data packet transmission
+		spi_write_and_read(0xFE);
+		for (i = 0; i < 512; ++i) {
+			spi_write_and_read(block[i]);
+		}
+
+		// Card doesn't check CRC, so we can send some constant value
+		spi_write_and_read(DUMMY_BYTE);
+		spi_write_and_read(DUMMY_BYTE);
+
+		// We should wait for a Data Response byte
+		i = 0;
+		while ((r1 = spi_write_and_read(DUMMY_BYTE)) == 0xFF && i < 10000) ++i;
+
+		if (i == 10000) {
+			card_disable();
+			spi_write_and_read(0xFF);
+			return;
+		}
+
+		// During the writing operation sd card holds data line low
+		i = 0;
+		while (spi_write_and_read(DUMMY_BYTE) != 0xFF) ++i;
+	}
 }
 
 uint8_t send_command(uint8_t cmd, uint32_t arg, uint8_t crc) {
