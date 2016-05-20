@@ -47,6 +47,7 @@
 #include "spi.h"
 #include "sdcard.h"
 #include "log.h"
+#include "stuffer.h"
 
 #define CHECK_SETUP(interface)  do{\
 		printf("Setting up " #interface ".......");\
@@ -239,26 +240,6 @@ static void process_ozone_and_uv(TelemetryPacket *packet) {
 	packet->uv_light = uv_light;
 
 	last_ozone_read = get_time_ms();
-}
-
-// NOTE: This function assumees that length <= 255
-static void stuff_data(uint8_t *input_data, int length, uint8_t *output_data) {
-	uint8_t *input_data_end = input_data + length;
-	uint8_t *block_start = output_data++;
-	uint8_t cur_code = 0x01;
-	while (input_data < input_data_end) {
-		if (*input_data == 0) {
-			*block_start++ = cur_code;
-			block_start = output_data++;
-			cur_code = 0x01;
-		} else {
-			*(output_data++) = *input_data;
-			++cur_code;
-		}
-		++input_data;
-	}
-	*block_start++ = cur_code;
-	*output_data = 0;
 }
 
 int main(void) {
