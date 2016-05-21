@@ -221,8 +221,8 @@ static void process_bh1750(BH1750 *sensor, TelemetryPacket *packet) {
 	packet->has_sun_sensor3 = true;
 //	packet->has_sun_sensor4 = true;
 	packet->sun_sensor1 = bh1750_read(sensor, 0);
-	packet->sun_sensor2 = bh1750_read(sensor, 1);
-	packet->sun_sensor3 = bh1750_read(sensor, 2);
+	packet->sun_sensor2 = bh1750_read(sensor, 2);
+	packet->sun_sensor3 = bh1750_read(sensor, 3);
 //	packet->sun_sensor4 = bh1750_read(sensor, 3);
 
 	sensor->conv_start_time = get_time_ms();
@@ -250,15 +250,14 @@ int main(void) {
 	clock_setup();
 	gpio_setup();
 	systick_setup();
-	usart_setup();
+//	usart_setup();
 	spi_setup();
 	sdcard_setup();
 //	CHECK_SETUP(sdcard);
 	log_setup();
-//	log_write("Hello from belnanosat!\n!!!!!", 25);
 	/* adc_setup(); */
 //	i2c_setup();
-//	msleep(1000);
+	msleep(1000);
 //	smbus_setup();
 	/* MPU6050_initialize(); */
 	/* HMC5883L_Init(); */
@@ -266,7 +265,7 @@ int main(void) {
 	/* last_hmc5883l_conversion = get_time_ms(); */
 	/* last_madgwick = get_time_ms(); */
 	/* // Init Gyroscope offsets */
-	int i;
+	/* int i; */
 	/* for(i = 0; i < 32; i ++) { */
 	/* 	gx_offset += MPU6050_getRotationX(); */
 	/* 	gy_offset += MPU6050_getRotationY(); */
@@ -277,10 +276,7 @@ int main(void) {
 	/* gy_offset >>= 5; */
 	/* gz_offset >>= 5; */
 
-/* 	last_ozone_read = get_time_ms(); */
-
-/* 	// Wait for initialization of all external sensors */
-/* 	msleep(100); */
+	/* last_ozone_read = get_time_ms(); */
 
 //	bmp180_setup(&bmp180_sensor, I2C2, BMP180_MODE_ULTRA_HIGHRES);
 /* 	bh1750_setup(&bh1750, I2C3); */
@@ -296,26 +292,26 @@ int main(void) {
 	static uint8_t buffer1[256];
 	static uint8_t buffer2[256];
 
-	/* rcc_periph_clock_enable(RCC_GPIOE); */
-	/* volatile uint8_t devices_num = ds18b20_setup(&ds18b20_bus, GPIOE, GPIO3, */
-	/*                                              DS18B20_RESOLUTION_12_BITS); */
+	rcc_periph_clock_enable(RCC_GPIOE);
+	volatile uint8_t devices_num = ds18b20_setup(&ds18b20_bus, GPIOE, GPIO3,
+	                                             DS18B20_RESOLUTION_12_BITS);
 
 //	volatile uint16_t temp = smbus_read_word(0, 0x06);
 
 	TelemetryPacket packet = TelemetryPacket_init_zero;
-	packet.has_quaternion0 = true;
-	packet.has_quaternion1 = true;
-	packet.has_quaternion2 = true;
-	packet.has_quaternion3 = true;
-	packet.has_acceleration_x = true;
-	packet.has_acceleration_y = true;
-	packet.has_acceleration_z = true;
-	packet.has_gyroscope_x = true;
-	packet.has_gyroscope_y = true;
-	packet.has_gyroscope_z = true;
+	/* packet.has_quaternion0 = true; */
+	/* packet.has_quaternion1 = true; */
+	/* packet.has_quaternion2 = true; */
+	/* packet.has_quaternion3 = true; */
+	/* packet.has_acceleration_x = true; */
+	/* packet.has_acceleration_y = true; */
+	/* packet.has_acceleration_z = true; */
+	/* packet.has_gyroscope_x = true; */
+	/* packet.has_gyroscope_y = true; */
+	/* packet.has_gyroscope_z = true; */
 
 
-	uint32_t last_packet_time = get_time_ms();
+	uint64_t last_packet_time = get_time_ms();
 	uint32_t packet_id = 0;
 	msleep(1000);
 	int cid = 0;
@@ -323,8 +319,8 @@ int main(void) {
 	while (1) {
 
 		/* iwdg_reset(); */
-//		process_bmp180(&bmp180_sensor, &packet);
-/* 		process_ds18b20(&ds18b20_bus, &packet); */
+		/* process_bmp180(&bmp180_sensor, &packet); */
+		/* process_ds18b20(&ds18b20_bus, &packet); */
 		/* process_mpu6050(&packet); */
 		/* process_hmc5883l(&packet); */
 		/* process_madgwick(&packet); */
@@ -365,7 +361,7 @@ int main(void) {
 			last_packet_time = get_time_ms();
 
 			/* Clear packet */
-//			packet = (TelemetryPacket)TelemetryPacket_init_zero;
+			packet = (TelemetryPacket)TelemetryPacket_init_zero;
 		}
 	}
 

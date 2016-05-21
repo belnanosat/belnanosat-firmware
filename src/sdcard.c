@@ -149,7 +149,7 @@ uint8_t sdcard_setup(void) {
 
 	r1 = send_command(16, 0x200, 0);
 
-	printf("Response: %d\r\n", (int)r1);
+//	printf("Response: %d\r\n", (int)r1);
 
 	return succesfull_init;
 }

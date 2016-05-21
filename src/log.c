@@ -49,6 +49,6 @@ void log_write(const uint8_t* data, uint32_t len) {
 		++cur_block_id;
 		memset(buff, 0, 512);
 		cur_block_shift = len - (512 - cur_block_shift);
-		memcpy(buff, data, cur_block_shift);
+		memcpy(buff, data + len - cur_block_shift, cur_block_shift);
 	}
 }
