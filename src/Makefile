@@ -3,8 +3,6 @@ BINARY = sat_firmware
 OPENCM3_DIR=../libopencm3
 LDSCRIPT = stm32f407vet6.ld
 
-$(shell cp chan_fat/src/ff.c .)
-
 OBJS += usart.o
 OBJS += adc.o
 OBJS += i2c.o
@@ -26,8 +24,6 @@ OBJS += madgwick_ahrs.o
 OBJS += proto/telemetry.pb.o
 OBJS += ../nanopb/pb_encode.o
 OBJS += ../nanopb/pb_common.o
-
-#OBJS += ff.o
 
 PROTOBUFFERS += telemetry.pb
 
