@@ -243,8 +243,8 @@ static adc_channel adc_channels[] = {
 };
 
 static void process_adc(TelemetryPacket *packet) {
-	ozone_sensor += adc_data[0];
-	uv_light_sensor += adc_data[1];
+	uv_light_sensor += adc_data[0];
+	ozone_sensor += adc_data[1];
 	temperature_sensor += adc_data[2];
 	++ozone_sensor_num;
 	++uv_light_sensor_num;
