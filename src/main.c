@@ -25,6 +25,7 @@
 #include <libopencm3/stm32/i2c.h>
 #include <libopencm3/stm32/spi.h>
 #include <libopencm3/stm32/iwdg.h>
+#include <libopencm3/stm32/adc.h>
 #include <libopencm3/cm3/nvic.h>
 #include <libopencm3/cm3/systick.h>
 
@@ -136,8 +137,7 @@ static void process_bmp180(BMP180 *sensor, TelemetryPacket *packet) {
 uint32_t last_mpu6050_conversion;
 uint32_t last_hmc5883l_conversion;
 uint32_t last_madgwick;
-uint32_t last_ozone_read;
-uint32_t last_uv_read;
+uint32_t last_adc_read;
 
 static void process_mpu6050(TelemetryPacket *packet) {
 	if (get_time_since(last_mpu6050_conversion) < 10) return;
@@ -228,18 +228,47 @@ static void process_bh1750(BH1750 *sensor, TelemetryPacket *packet) {
 	sensor->conv_start_time = get_time_ms();
 }
 
-static void process_ozone_and_uv(TelemetryPacket *packet) {
-	if (get_time_since(last_ozone_read) < 300) return;
+static uint16_t adc_data[3];
+static uint32_t ozone_sensor = 0;
+static uint32_t ozone_sensor_num = 0;
+static uint32_t uv_light_sensor = 0;
+static uint32_t uv_light_sensor_num = 0;
+static uint32_t temperature_sensor = 0;
+static uint32_t temperature_sensor_num = 0;
+static uint8_t adc_channel_ids[] = {ADC_CHANNEL10, ADC_CHANNEL11, ADC_CHANNEL16};
+static adc_channel adc_channels[] = {
+	{.rcc_port = RCC_GPIOC, .gpio_port = GPIOC, .gpio = GPIO0},
+	{.rcc_port = RCC_GPIOC, .gpio_port = GPIOC, .gpio = GPIO1},
+	{.rcc_port = 0, .gpio_port = 0, .gpio = 0},
+};
 
-	uint16_t ozone, uv_light;
-	adc_read(&ozone, &uv_light);
+static void process_adc(TelemetryPacket *packet) {
+	ozone_sensor += adc_data[0];
+	uv_light_sensor += adc_data[1];
+	temperature_sensor += adc_data[2];
+	++ozone_sensor_num;
+	++uv_light_sensor_num;
+	++temperature_sensor_num;
+
+	if (get_time_since(last_adc_read) < 300) return;
+
 	packet->has_ozone = true;
-	packet->ozone = ozone;
+	packet->ozone = (float)ozone_sensor / ozone_sensor_num;
 
 	packet->has_uv_light = true;
-	packet->uv_light = uv_light;
+	packet->uv_light = (float)uv_light_sensor / uv_light_sensor_num;
 
-	last_ozone_read = get_time_ms();
+	packet->has_cpu_temperature = true;
+	packet->cpu_temperature = (float)temperature_sensor / temperature_sensor_num;
+
+	ozone_sensor = 0;
+	uv_light_sensor = 0;
+	temperature_sensor = 0;
+	ozone_sensor_num = 0;
+	uv_light_sensor_num = 0;
+	temperature_sensor_num = 0;
+
+	last_adc_read = get_time_ms();
 }
 
 int main(void) {
@@ -255,30 +284,30 @@ int main(void) {
 	sdcard_setup();
 //	CHECK_SETUP(sdcard);
 	log_setup();
-	/* adc_setup(); */
-//	i2c_setup();
+	adc_setup(adc_channels, adc_channel_ids, adc_data, 3);
+	i2c_setup();
 	msleep(1000);
 //	smbus_setup();
-	/* MPU6050_initialize(); */
-	/* HMC5883L_Init(); */
-	/* last_mpu6050_conversion = get_time_ms(); */
-	/* last_hmc5883l_conversion = get_time_ms(); */
-	/* last_madgwick = get_time_ms(); */
-	/* // Init Gyroscope offsets */
-	/* int i; */
-	/* for(i = 0; i < 32; i ++) { */
-	/* 	gx_offset += MPU6050_getRotationX(); */
-	/* 	gy_offset += MPU6050_getRotationY(); */
-	/* 	gz_offset += MPU6050_getRotationZ(); */
-	/* 	msleep(100); */
-	/* } */
-	/* gx_offset >>= 5; */
-	/* gy_offset >>= 5; */
-	/* gz_offset >>= 5; */
+	MPU6050_initialize();
+	HMC5883L_Init();
+	last_mpu6050_conversion = get_time_ms();
+	last_hmc5883l_conversion = get_time_ms();
+	last_madgwick = get_time_ms();
+	// Init Gyroscope offsets
+	int i;
+	for(i = 0; i < 32; i ++) {
+		gx_offset += MPU6050_getRotationX();
+		gy_offset += MPU6050_getRotationY();
+		gz_offset += MPU6050_getRotationZ();
+		msleep(100);
+	}
+	gx_offset >>= 5;
+	gy_offset >>= 5;
+	gz_offset >>= 5;
 
 	/* last_ozone_read = get_time_ms(); */
 
-//	bmp180_setup(&bmp180_sensor, I2C2, BMP180_MODE_ULTRA_HIGHRES);
+	bmp180_setup(&bmp180_sensor, I2C2, BMP180_MODE_ULTRA_HIGHRES);
 /* 	bh1750_setup(&bh1750, I2C3); */
 /* //	EEPROM_setup(&eeprom, I2C2); */
 
@@ -295,6 +324,7 @@ int main(void) {
 	rcc_periph_clock_enable(RCC_GPIOE);
 	volatile uint8_t devices_num = ds18b20_setup(&ds18b20_bus, GPIOE, GPIO3,
 	                                             DS18B20_RESOLUTION_12_BITS);
+	ds18b20_start_all(&ds18b20_bus);
 
 //	volatile uint16_t temp = smbus_read_word(0, 0x06);
 
@@ -319,12 +349,12 @@ int main(void) {
 	while (1) {
 
 		/* iwdg_reset(); */
-		/* process_bmp180(&bmp180_sensor, &packet); */
-		/* process_ds18b20(&ds18b20_bus, &packet); */
-		/* process_mpu6050(&packet); */
-		/* process_hmc5883l(&packet); */
-		/* process_madgwick(&packet); */
-/* 		process_ozone_and_uv(&packet); */
+		process_bmp180(&bmp180_sensor, &packet);
+		process_ds18b20(&ds18b20_bus, &packet);
+		process_mpu6050(&packet);
+		process_hmc5883l(&packet);
+		process_madgwick(&packet);
+		process_adc(&packet);
 /* 		process_bh1750(&bh1750, &packet); */
 
 		/* Is it time to send a packet? */
@@ -352,11 +382,6 @@ int main(void) {
 #endif
 
 			log_write(buffer2, stream.bytes_written + 3);
-
-			/* for (i = 0; i < stream.bytes_written + 3; ++i) { */
-			/* 	putc(buffer2[i], stdout); */
-			/* } */
-			/* fflush(stdout); */
 
 			last_packet_time = get_time_ms();
 
