@@ -62,13 +62,13 @@ uint8_t ds18b20_setup(DS18B20Bus *bus, uint32_t gpio_port, uint16_t gpio_pin,
 				break;
 			}
 		}
-		if (!is_found) {
-			printf("Warning: unknown device serial code, ignoring it: ");
-			for (i = 0; i < 8; ++i) {
-				printf("0x%02X, ", tmp_rom[i]);
-			}
-			printf("\n\r");
-		}
+		/* if (!is_found) { */
+		/* 	printf("Warning: unknown device serial code, ignoring it: "); */
+		/* 	for (i = 0; i < 8; ++i) { */
+		/* 		printf("0x%02X, ", tmp_rom[i]); */
+		/* 	} */
+		/* 	printf("\n\r"); */
+		/* } */
 		devices = OneWire_Next(&bus->one_wire);
 	}
 

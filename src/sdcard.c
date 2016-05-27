@@ -118,7 +118,8 @@ uint8_t sdcard_setup(void) {
 	}
 
 	if (r1 != 0x00) {
-		printf("CMD55 error occured: %d\r\n", (int)r1);
+//		printf("CMD55 error occured: %d\r\n", (int)r1);
+		return 0;
 	}
 
 	if (!succesfull_init) {
@@ -159,7 +160,7 @@ void sdcard_single_block_read(uint32_t address, uint8_t *block) {
 	uint32_t i;
 
 	if (r1 != 0x00) {
-		printf("Read Error1: %d\r\n", (int)r1);
+//		printf("Read Error1: %d\r\n", (int)r1);
 		return;
 	}
 
@@ -171,7 +172,7 @@ void sdcard_single_block_read(uint32_t address, uint8_t *block) {
 	}
 
 	if (r1 != 0xFE) {
-		printf("Read Error2: %d\r\n", (int)r1);
+//		printf("Read Error2: %d\r\n", (int)r1);
 		return;
 	}
 
@@ -194,7 +195,7 @@ void sdcard_single_block_write(uint32_t address, uint8_t *block) {
 	uint32_t i;
 
 	if (r1 != 0x00) {
-		printf("Write Error1: %d\r\n", (int)r1);
+//		printf("Write Error1: %d\r\n", (int)r1);
 		return;
 	}
 
@@ -225,7 +226,7 @@ void sdcard_single_block_write(uint32_t address, uint8_t *block) {
 
 	// Status "010" means that data is accepted
 	if (((r1 & 0xE) >> 1) != STATUS_DATA_ACCEPTED) {
-		printf("Write error2: %x\r\n", r1);
+//		printf("Write error2: %x\r\n", r1);
 		return;
 	}
 
@@ -240,7 +241,7 @@ void sdcard_single_block_write(uint32_t address, uint8_t *block) {
 	uint8_t r2 = spi_write_and_read(DUMMY_BYTE);
 
 	if (r1 || r2) {
-		printf("CMD13 Error!\r\n");
+//		printf("CMD13 Error!\r\n");
 	}
 	card_disable();
 	spi_write_and_read(DUMMY_BYTE);
@@ -283,7 +284,7 @@ void sdcard_multiple_block_write(uint32_t address, uint8_t *block) {
 		i = 0;
 		while (spi_write_and_read(DUMMY_BYTE) != 0xFF && i < 1000) ++i;
 
-		printf("%d One more write took: %d\r\n", blockw_id++, (int)i);
+//		printf("%d One more write took: %d\r\n", blockw_id++, (int)i);
 	} else {
 		// set earse block count
 		uint8_t r1 = send_command(55, 0, 0);
@@ -294,7 +295,7 @@ void sdcard_multiple_block_write(uint32_t address, uint8_t *block) {
 		uint32_t i;
 
 		if (r1 != 0x00) {
-			printf("Write Error1: %d\r\n", (int)r1);
+//			printf("Write Error1: %d\r\n", (int)r1);
 			return;
 		}
 
