@@ -40,6 +40,7 @@
 #include "utils.h"
 #include "eeprom.h"
 #include "ds18b20.h"
+#include "habduino.h"
 #include "smbus.h"
 #include "mpu6050.h"
 #include "hmc5883l.h"
@@ -124,8 +125,8 @@ static void process_bmp180(BMP180 *sensor, TelemetryPacket *packet) {
 	if (!bmp180_is_conversion_finished(sensor)) return;
 	bmp180_finish_conv(sensor);
 
-	packet->altitude = sensor->altitude;
-	packet->has_altitude = true;
+	packet->bmp180_altitude = sensor->altitude;
+	packet->has_bmp180_altitude = true;
 	packet->pressure = sensor->pressure;
 	packet->has_pressure = true;
 	packet->bmp180_temperature = sensor->temperature;
@@ -271,6 +272,24 @@ static void process_adc(TelemetryPacket *packet) {
 	last_adc_read = get_time_ms();
 }
 
+static void process_gps(TelemetryPacket *packet) {
+	if (!habduino_has_new_data) return;
+
+	packet->gps_altitude = habduino_altitude;
+	packet->has_gps_altitude = true;
+
+	packet->latitude = habduino_latitude;
+	packet->has_latitude = true;
+
+	packet->longitude = habduino_longitude;
+	packet->has_longitude = true;
+
+	packet->gps_sats_num = habduino_sats_num;
+	packet->has_gps_sats_num = true;
+
+	habduino_has_new_data = false;
+}
+
 int main(void) {
 	BMP180 bmp180_sensor;
 	EEPROM eeprom;
@@ -344,8 +363,6 @@ int main(void) {
 	uint64_t last_packet_time = get_time_ms();
 	uint32_t packet_id = 0;
 	msleep(1000);
-	int cid = 0;
-	uint8_t pid = 0;
 	while (1) {
 
 		/* iwdg_reset(); */
@@ -356,6 +373,7 @@ int main(void) {
 		process_madgwick(&packet);
 		process_adc(&packet);
 /* 		process_bh1750(&bh1750, &packet); */
+		process_gps(&packet);
 
 		/* Is it time to send a packet? */
 		if (get_time_since(last_packet_time) > PACKET_DELAY_MS) {

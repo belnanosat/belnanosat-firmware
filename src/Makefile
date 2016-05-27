@@ -21,6 +21,7 @@ OBJS += sdcard.o
 OBJS += stuffer.o
 OBJS += log.o
 OBJS += madgwick_ahrs.o
+OBJS += habduino.o
 OBJS += proto/telemetry.pb.o
 OBJS += ../nanopb/pb_encode.o
 OBJS += ../nanopb/pb_common.o

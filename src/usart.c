@@ -26,6 +26,7 @@
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/gpio.h>
 #include <libopencm3/stm32/usart.h>
+#include <libopencm3/cm3/nvic.h>
 
 extern int _write(int file, char *ptr, int len);
 extern int _read(int file, char *buf, int len);
@@ -33,13 +34,15 @@ extern int _read(int file, char *buf, int len);
  * USART1 pins:
  * RX - PA10, TX - PA9 - works only if you remove PA9-VBUS jumper!
  * USART2 pins:
- * RX - PA1, TX - PA2 - works!
+ * RX - PA3, TX - PA2 - works!
  * USART3 pins:
  * RX - PB11, TX - PB10 - works!
  */
 
-void usart_setup(void)
-{
+void usart_setup(void) {
+	/* Enable the USART2 interrupt. */
+	nvic_enable_irq(NVIC_USART2_IRQ);
+
 	/* Enable all required USART modules */
 	rcc_periph_clock_enable(USART_RCC_PORT);
 	rcc_periph_clock_enable(USART_RCC_ID);
@@ -60,6 +63,8 @@ void usart_setup(void)
 	usart_set_mode(USART_ID, USART_MODE_TX_RX);
 	usart_set_parity(USART_ID, USART_PARITY_NONE);
 	usart_set_flow_control(USART_ID, USART_FLOWCONTROL_NONE);
+
+	usart_enable_rx_interrupt(USART_ID);
 
 	/* Finally enable the USART. */
 	usart_enable(USART_ID);
