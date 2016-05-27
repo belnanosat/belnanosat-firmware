@@ -79,7 +79,7 @@ SCRIPT_DIR	= $(OPENCM3_DIR)/scripts
 ###############################################################################
 # C flags
 
-CFLAGS		+= -Os -g
+CFLAGS		+= -Os -mfpu=vfpv4-d16 -mfloat-abi=hard -ffast-math -g
 CFLAGS		+= -Wextra -Wshadow -Wimplicit-function-declaration
 CFLAGS		+= -Wredundant-decls -Wmissing-prototypes -Wstrict-prototypes
 CFLAGS		+= -fno-common -ffunction-sections -fdata-sections
@@ -106,6 +106,7 @@ LDFLAGS		+= -L$(LIB_DIR)
 LDFLAGS		+= -T$(LDSCRIPT)
 LDFLAGS		+= -Wl,-Map=$(*).map
 LDFLAGS		+= -Wl,--gc-sections
+LDFLAGS		+= -flto
 ifeq ($(V),99)
 LDFLAGS		+= -Wl,--print-gc-sections
 endif
