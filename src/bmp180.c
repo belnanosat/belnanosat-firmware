@@ -73,7 +73,7 @@ void bmp180_finish_conv(BMP180 *sensor) {
 }
 
 bool bmp180_is_conversion_finished(BMP180 *sensor) {
-	return get_time_since(sensor->conv_start_time) >= pressure_conversion_time[sensor->oss];
+	return get_time_since_ms(sensor->conv_start_time) >= pressure_conversion_time[sensor->oss];
 }
 
 int32_t read_temperature(BMP180 *sensor) {

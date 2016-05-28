@@ -142,7 +142,7 @@ uint32_t last_madgwick;
 uint32_t last_adc_read;
 
 static void process_mpu6050(TelemetryPacket *packet) {
-	if (get_time_since(last_mpu6050_conversion) < 10) return;
+	if (get_time_since_ms(last_mpu6050_conversion) < 10) return;
 
 	int16_t ax, ay, az, gx, gy, gz;
 	MPU6050_getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
@@ -176,7 +176,7 @@ static void process_mpu6050(TelemetryPacket *packet) {
 }
 
 static void process_hmc5883l(TelemetryPacket *packet) {
-	if (get_time_since(last_hmc5883l_conversion) < 20) return;
+	if (get_time_since_ms(last_hmc5883l_conversion) < 20) return;
 
 	int16_t mx, my, mz;
 	HMC5883L_GetHeading(&mx, &my, &mz);
@@ -199,7 +199,7 @@ static void process_hmc5883l(TelemetryPacket *packet) {
 }
 
 static void process_madgwick(TelemetryPacket *packet) {
-	if (get_time_since(last_madgwick) < 10) return;
+	if (get_time_since_ms(last_madgwick) < 10) return;
 
 	if (!has_read_mpu6050 || !has_read_hmc5883l) return;
 
@@ -252,7 +252,7 @@ static void process_adc(TelemetryPacket *packet) {
 	++uv_light_sensor_num;
 	++temperature_sensor_num;
 
-	if (get_time_since(last_adc_read) < 300) return;
+	if (get_time_since_ms(last_adc_read) < 300) return;
 
 	packet->has_ozone = true;
 	packet->ozone = (float)ozone_sensor / ozone_sensor_num;
@@ -471,7 +471,7 @@ int main(void) {
 		}
 
 		/* Is it time to send a packet? */
-		if (get_time_since(last_packet_time) > PACKET_DELAY_MS) {
+		if (get_time_since_ms(last_packet_time) > PACKET_DELAY_MS) {
 			packet.packet_id = ++packet_id;
 			packet.timestamp = get_time_ms();
 			packet.status = 0xFFFFFFFF;

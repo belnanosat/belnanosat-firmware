@@ -25,6 +25,14 @@ uint64_t get_time_ms(void) {
 	return system_microseconds / 1000;
 }
 
-uint64_t get_time_since(uint64_t start_time) {
+uint64_t get_time_us(void) {
+	return system_microseconds;
+}
+
+uint64_t get_time_since_ms(uint64_t start_time) {
 	return get_time_ms() - start_time;
+}
+
+uint64_t get_time_since_us(uint64_t start_time) {
+	return system_microseconds - start_time;
 }
