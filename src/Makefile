@@ -1,3 +1,5 @@
+include ../nanopb/extra/nanopb.mk
+
 BINARY = sat_firmware
 
 OPENCM3_DIR=../libopencm3
