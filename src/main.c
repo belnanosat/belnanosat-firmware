@@ -366,7 +366,8 @@ int main(void) {
 	clock_setup();
 	gpio_setup();
 	systick_setup();
-//	usart_setup();
+	usart1_setup();
+//	usart2_setup();
 	spi_setup();
 	sdcard_setup();
 //	CHECK_SETUP(sdcard);
@@ -416,18 +417,6 @@ int main(void) {
 //	volatile uint16_t temp = smbus_read_word(0, 0x06);
 
 	TelemetryPacket packet = TelemetryPacket_init_zero;
-	/* packet.has_quaternion0 = true; */
-	/* packet.has_quaternion1 = true; */
-	/* packet.has_quaternion2 = true; */
-	/* packet.has_quaternion3 = true; */
-	/* packet.has_acceleration_x = true; */
-	/* packet.has_acceleration_y = true; */
-	/* packet.has_acceleration_z = true; */
-	/* packet.has_gyroscope_x = true; */
-	/* packet.has_gyroscope_y = true; */
-	/* packet.has_gyroscope_z = true; */
-
-
 	uint64_t last_packet_time = get_time_ms();
 	uint32_t packet_id = 0;
 	uint32_t habduino_packet_id = 0;
@@ -462,9 +451,9 @@ int main(void) {
 			/* 	usart_send_blocking(USART_ID, buffer2[i]); */
 			/* } */
 
-			usart_send_blocking(USART_ID, 10);
+			usart_send_blocking(USART1_ID, 10);
 			for (i = 0; i < 10; ++i) {
-				usart_send_blocking(USART_ID, 0xFF);
+				usart_send_blocking(USART1_ID, 0xFF);
 			}
 
 			habduino_has_pending_packet_request = false;

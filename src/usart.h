@@ -20,16 +20,25 @@
 #ifndef USART_H
 #define USART_H
 
-#define USART_ID USART2
-#define USART_RCC_ID RCC_USART2
-#define USART_PORT GPIOA
-#define USART_RCC_PORT RCC_GPIOA
-#define USART_TX GPIO2
-#define USART_RX GPIO3
-#define USART_BAUD_RATE 38400
+#define USART1_ID USART2
+#define USART1_RCC_ID RCC_USART2
+#define USART1_PORT GPIOA
+#define USART1_RCC_PORT RCC_GPIOA
+#define USART1_TX GPIO2
+#define USART1_RX GPIO3
+#define USART1_BAUD_RATE 38400
+
+#define USART2_ID USART3
+#define USART2_RCC_ID RCC_USART3
+#define USART2_PORT GPIOB
+#define USART2_RCC_PORT RCC_GPIOB
+#define USART2_TX GPIO10
+#define USART2_RX GPIO11
+#define USART2_BAUD_RATE 38400
 
 //#define USART_AUTO_ECHO
 
-extern void usart_setup(void);
+extern void usart1_setup(void);
+extern void usart2_setup(void);
 
 #endif
