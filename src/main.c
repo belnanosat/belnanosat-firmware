@@ -24,6 +24,7 @@
 #include <libopencm3/stm32/gpio.h>
 #include <libopencm3/stm32/i2c.h>
 #include <libopencm3/stm32/spi.h>
+#include <libopencm3/stm32/usart.h>
 #include <libopencm3/stm32/iwdg.h>
 #include <libopencm3/stm32/adc.h>
 #include <libopencm3/cm3/nvic.h>
@@ -290,6 +291,73 @@ static void process_gps(TelemetryPacket *packet) {
 	habduino_has_new_data = false;
 }
 
+static uint32_t packet_mask;
+
+static void mask_packet_fields(TelemetryPacket *packet) {
+	packet_mask = 0;
+	if (packet->has_acceleration_x) packet_mask |= (1 << 0);
+	if (packet->has_acceleration_y) packet_mask |= (1 << 1);
+	if (packet->has_acceleration_z) packet_mask |= (1 << 2);
+	if (packet->has_gyroscope_x) packet_mask |= (1 << 3);
+	if (packet->has_gyroscope_y) packet_mask |= (1 << 4);
+	if (packet->has_gyroscope_z) packet_mask |= (1 << 5);
+	if (packet->has_sun_sensor1) packet_mask |= (1 << 6);
+	if (packet->has_sun_sensor2) packet_mask |= (1 << 7);
+	if (packet->has_sun_sensor3) packet_mask |= (1 << 8);
+	if (packet->has_sun_sensor4) packet_mask |= (1 << 9);
+	if (packet->has_magnetometer_x) packet_mask |= (1 << 10);
+	if (packet->has_magnetometer_y) packet_mask |= (1 << 11);
+	if (packet->has_magnetometer_z) packet_mask |= (1 << 12);
+	if (packet->has_quaternion0) packet_mask |= (1 << 13);
+	if (packet->has_quaternion1) packet_mask |= (1 << 14);
+	if (packet->has_quaternion2) packet_mask |= (1 << 15);
+	if (packet->has_quaternion3) packet_mask |= (1 << 16);
+	if (packet->has_ozone) packet_mask |= (1 << 17);
+	if (packet->has_uv_light) packet_mask |= (1 << 18);
+
+	packet->has_acceleration_x = false;
+	packet->has_acceleration_y = false;
+	packet->has_acceleration_z = false;
+	packet->has_gyroscope_x = false;
+	packet->has_gyroscope_y = false;
+	packet->has_gyroscope_z = false;
+	packet->has_sun_sensor1 = false;
+	packet->has_sun_sensor2 = false;
+	packet->has_sun_sensor3 = false;
+	packet->has_sun_sensor4 = false;
+	packet->has_magnetometer_x = false;
+	packet->has_magnetometer_y = false;
+	packet->has_magnetometer_z = false;
+	packet->has_quaternion0 = false;
+	packet->has_quaternion1 = false;
+	packet->has_quaternion2 = false;
+	packet->has_quaternion3 = false;
+	packet->has_ozone = false;
+	packet->has_uv_light = false;
+}
+
+static void unmask_packet_fields(TelemetryPacket *packet) {
+	if (packet_mask & (1 << 0)) packet->has_acceleration_x = true;
+	if (packet_mask & (1 << 1)) packet->has_acceleration_y = true;
+	if (packet_mask & (1 << 2)) packet->has_acceleration_z = true;
+	if (packet_mask & (1 << 3)) packet->has_gyroscope_x = true;
+	if (packet_mask & (1 << 4)) packet->has_gyroscope_y = true;
+	if (packet_mask & (1 << 5)) packet->has_gyroscope_z = true;
+	if (packet_mask & (1 << 6)) packet->has_sun_sensor1 = true;
+	if (packet_mask & (1 << 7)) packet->has_sun_sensor2 = true;
+	if (packet_mask & (1 << 8)) packet->has_sun_sensor3 = true;
+	if (packet_mask & (1 << 9)) packet->has_sun_sensor4 = true;
+	if (packet_mask & (1 << 10)) packet->has_magnetometer_x = true;
+	if (packet_mask & (1 << 11)) packet->has_magnetometer_y = true;
+	if (packet_mask & (1 << 12)) packet->has_magnetometer_z = true;
+	if (packet_mask & (1 << 13)) packet->has_quaternion0 = true;
+	if (packet_mask & (1 << 14)) packet->has_quaternion1 = true;
+	if (packet_mask & (1 << 15)) packet->has_quaternion2 = true;
+	if (packet_mask & (1 << 16)) packet->has_quaternion3 = true;
+	if (packet_mask & (1 << 17)) packet->has_ozone = true;
+	if (packet_mask & (1 << 18)) packet->has_uv_light = true;
+}
+
 int main(void) {
 	BMP180 bmp180_sensor;
 	EEPROM eeprom;
@@ -362,6 +430,8 @@ int main(void) {
 
 	uint64_t last_packet_time = get_time_ms();
 	uint32_t packet_id = 0;
+	uint32_t habduino_packet_id = 0;
+	uint8_t checksum;
 	msleep(1000);
 	while (1) {
 
@@ -375,11 +445,33 @@ int main(void) {
 /* 		process_bh1750(&bh1750, &packet); */
 		process_gps(&packet);
 
+		if (habduino_has_pending_packet_request) {
+			packet.packet_id = habduino_packet_id;
+			packet.timestamp = get_time_ms();
+			packet.status = 0xFFFFFFFF;
+
+			/* mask_packet_fields(&packet); */
+			/* pb_ostream_t stream = pb_ostream_from_buffer(buffer1, sizeof(buffer1)); */
+			/* bool status = pb_encode(&stream, TelemetryPacket_fields, &packet); */
+			/* unmask_packet_fields(&packet); */
+
+			/* int len = stuff_data(buffer1, stream.bytes_written, buffer2); */
+
+			/* usart_send_blocking(USART_ID, len); */
+			/* for (i = 0; i < len; ++i) { */
+			/* 	usart_send_blocking(USART_ID, buffer2[i]); */
+			/* } */
+
+			usart_send_blocking(USART_ID, 10);
+			for (i = 0; i < 10; ++i) {
+				usart_send_blocking(USART_ID, 0xFF);
+			}
+
+			habduino_has_pending_packet_request = false;
+		}
+
 		/* Is it time to send a packet? */
 		if (get_time_since(last_packet_time) > PACKET_DELAY_MS) {
-			gpio_toggle(GPIOD, GPIO12);
-			uint8_t checksum;
-
 			packet.packet_id = ++packet_id;
 			packet.timestamp = get_time_ms();
 			packet.status = 0xFFFFFFFF;
