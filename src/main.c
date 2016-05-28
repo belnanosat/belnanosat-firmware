@@ -51,6 +51,7 @@
 #include "sdcard.h"
 #include "log.h"
 #include "stuffer.h"
+#include "radiation_sensor.h"
 
 #define CHECK_SETUP(interface)  do{\
 		printf("Setting up " #interface ".......");\
@@ -291,6 +292,24 @@ static void process_gps(TelemetryPacket *packet) {
 	habduino_has_new_data = false;
 }
 
+static void process_radiation_sensor(TelemetryPacket *packet) {
+	uint32_t i;
+	if (radiation_sensor_cnt == 0) return;
+
+	packet->radiation_pulses_count = radiation_sensor_cnt;
+	packet->has_radiation_pulses_count = true;
+
+	packet->radiation_window_start_time = radiation_sensor_window_start_time;
+	packet->has_radiation_window_start_time = true;
+
+	packet->radiation_pulses_timestamps_count = packet->radiation_pulses_count;
+	for (i = 0; i < packet->radiation_pulses_count; ++i) {
+		packet->radiation_pulses_timestamps[i] = radiation_sensor_pulses[i];
+	}
+
+	radiation_sensor_clear_data();
+}
+
 static uint32_t packet_mask;
 
 static void mask_packet_fields(TelemetryPacket *packet) {
@@ -370,6 +389,7 @@ int main(void) {
 //	usart2_setup();
 	spi_setup();
 	sdcard_setup();
+	radiation_sensor_setup();
 //	CHECK_SETUP(sdcard);
 	log_setup();
 	adc_setup(adc_channels, adc_channel_ids, adc_data, 3);
@@ -382,7 +402,7 @@ int main(void) {
 	last_hmc5883l_conversion = get_time_ms();
 	last_madgwick = get_time_ms();
 	// Init Gyroscope offsets
-	int i;
+	uint32_t i;
 	for(i = 0; i < 32; i ++) {
 		gx_offset += MPU6050_getRotationX();
 		gy_offset += MPU6050_getRotationY();
@@ -393,11 +413,9 @@ int main(void) {
 	gy_offset >>= 5;
 	gz_offset >>= 5;
 
-	/* last_ozone_read = get_time_ms(); */
-
 	bmp180_setup(&bmp180_sensor, I2C2, BMP180_MODE_ULTRA_HIGHRES);
-/* 	bh1750_setup(&bh1750, I2C3); */
-/* //	EEPROM_setup(&eeprom, I2C2); */
+//	bh1750_setup(&bh1750, I2C3);
+//	EEPROM_setup(&eeprom, I2C2);
 
 /* 	iwdg_set_period_ms(2000); */
 /* 	iwdg_start(); */
@@ -406,8 +424,8 @@ int main(void) {
 	gpio_set(GPIOD, GPIO12);
 	gpio_clear(GPIOD, GPIO15);
 
-	static uint8_t buffer1[256];
-	static uint8_t buffer2[256];
+	static uint8_t buffer1[512];
+	static uint8_t buffer2[512];
 
 	rcc_periph_clock_enable(RCC_GPIOE);
 	volatile uint8_t devices_num = ds18b20_setup(&ds18b20_bus, GPIOE, GPIO3,
@@ -433,6 +451,7 @@ int main(void) {
 		process_adc(&packet);
 /* 		process_bh1750(&bh1750, &packet); */
 		process_gps(&packet);
+		process_radiation_sensor(&packet);
 
 		if (habduino_has_pending_packet_request) {
 			packet.packet_id = habduino_packet_id;
