@@ -409,8 +409,10 @@ int main(void) {
 	log_setup();
 	adc_setup(adc_channels, adc_channel_ids, adc_data, 3);
 	i2c_setup();
+	smbus_setup();
 	msleep(1000);
-//	smbus_setup();
+
+	mlx90614_setup();
 	MPU6050_initialize();
 	HMC5883L_Init();
 	last_mpu6050_conversion = get_time_ms();
@@ -447,14 +449,11 @@ int main(void) {
 	                                             DS18B20_RESOLUTION_12_BITS);
 	ds18b20_start_all(&ds18b20_bus);
 
-//	volatile uint16_t temp = smbus_read_word(0, 0x06);
-
 	TelemetryPacket packet = TelemetryPacket_init_zero;
 	uint64_t last_packet_time = get_time_ms();
 	uint32_t packet_id = 0;
 	uint32_t habduino_packet_id = 0;
 	uint8_t checksum;
-	msleep(1000);
 	while (1) {
 
 		/* iwdg_reset(); */

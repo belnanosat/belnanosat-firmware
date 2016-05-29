@@ -67,5 +67,5 @@ uint16_t bh1750_read(BH1750 *sensor, int id) {
 }
 
 bool bh1750_is_conversion_finished(BH1750 *sensor) {
-	return get_time_since(sensor->conv_start_time) >= 400;
+	return get_time_since_ms(sensor->conv_start_time) >= 400;
 }
