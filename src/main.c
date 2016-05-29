@@ -52,6 +52,7 @@
 #include "log.h"
 #include "stuffer.h"
 #include "radiation_sensor.h"
+#include "mlx90614.h"
 
 #define CHECK_SETUP(interface)  do{\
 		printf("Setting up " #interface ".......");\
@@ -141,6 +142,7 @@ uint32_t last_mpu6050_conversion;
 uint32_t last_hmc5883l_conversion;
 uint32_t last_madgwick;
 uint32_t last_adc_read;
+uint32_t last_mlx90614_conversion;
 
 static void process_mpu6050(TelemetryPacket *packet) {
 	if (get_time_since_ms(last_mpu6050_conversion) < 10) return;
@@ -310,6 +312,19 @@ static void process_radiation_sensor(TelemetryPacket *packet) {
 	radiation_sensor_clear_data();
 }
 
+static void process_mlx90614(TelemetryPacket *packet) {
+	// TODO: find out exact delay between conversions
+	if (get_time_since_ms(last_mlx90614_conversion) < 500) return;
+
+	packet->mlx90614_ambient_temperature = mlx90614_read_ambient_temp();
+	packet->has_mlx90614_ambient_temperature = true;
+
+	packet->mlx90614_object_temperature = mlx90614_read_object_temp();
+	packet->has_mlx90614_object_temperature = true;
+
+	last_mlx90614_conversion = get_time_ms();
+}
+
 static uint32_t packet_mask;
 
 static void mask_packet_fields(TelemetryPacket *packet) {
@@ -452,6 +467,7 @@ int main(void) {
 /* 		process_bh1750(&bh1750, &packet); */
 		process_gps(&packet);
 		process_radiation_sensor(&packet);
+		process_mlx90614(&packet);
 
 		if (habduino_has_pending_packet_request) {
 			packet.packet_id = habduino_packet_id;

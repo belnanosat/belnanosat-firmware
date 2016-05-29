@@ -22,7 +22,7 @@
 
 #include <inttypes.h>
 
-#define SMBUS_NAME             I2C3
+#define SMBUS_NAME             I2C1
 
 extern void smbus_setup(void);
 extern void smbus_write_word(uint8_t device_address, uint8_t reg_address, uint16_t data);

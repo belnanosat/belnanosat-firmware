@@ -32,30 +32,32 @@
  * SDA - PC9, SCL - PA8
  */
 void smbus_setup(void) {
-	rcc_periph_clock_enable(RCC_GPIOA);
-	rcc_periph_clock_enable(RCC_GPIOC);
+	rcc_periph_clock_enable(RCC_GPIOB);
 
-	gpio_mode_setup(GPIOA, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO8);
-	gpio_mode_setup(GPIOC, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO9);
-	gpio_set_output_options(GPIOA, GPIO_OTYPE_OD, GPIO_OSPEED_50MHZ, GPIO8);
-	gpio_set_output_options(GPIOC, GPIO_OTYPE_OD, GPIO_OSPEED_50MHZ, GPIO9);
-	gpio_set_af(GPIOA, GPIO_AF4, GPIO8);
-	gpio_set_af(GPIOC, GPIO_AF4, GPIO9);
+	gpio_mode_setup(GPIOB, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO6 | GPIO7);
+	gpio_set_output_options(GPIOB, GPIO_OTYPE_OD, GPIO_OSPEED_50MHZ, GPIO6 | GPIO7);
+	gpio_set_af(GPIOB, GPIO_AF4, GPIO6 | GPIO7);
 
-	rcc_periph_clock_enable(RCC_I2C3);
-	i2c_reset(I2C3);
-	i2c_peripheral_disable(I2C3);
+	rcc_periph_clock_enable(RCC_I2C1);
+	i2c_reset(I2C1);
+	i2c_peripheral_disable(I2C1);
 
 	// rcc_apb1_frequency = 42MHz
-	i2c_set_clock_frequency(I2C3, rcc_apb1_frequency/1000000);
-	i2c_set_standard_mode(I2C3);
-	i2c_set_dutycycle(I2C3, I2C_CCR_DUTY_16_DIV_9);
-	I2C_CR1(I2C3) |= I2C_CR1_SMBTYPE;
+	i2c_set_clock_frequency(I2C1, rcc_apb1_frequency/1000000);
+	i2c_set_standard_mode(I2C1);
+	i2c_set_dutycycle(I2C1, I2C_CCR_DUTY_DIV2); // Div2
+	I2C_CR1(I2C1) |= I2C_CR1_SMBTYPE;
 
-	// For APB1 PCLK1 = 42MHz => I2C speed = 400kHz
-	i2c_set_ccr(I2C3, 3);
+	/*
+	 * For APB1 PCLK1 = 42MHz => I2C speed = 100kHz
+	 * General equation is CCR * I2C_frequency = PCLK1_frequency
+	 */
+	i2c_set_ccr(I2C1, 420);
 
-	i2c_peripheral_enable(I2C3);
+	i2c_peripheral_enable(I2C1);
+
+	// ACK bit is cleared by hardware when I2C is disabled
+	i2c_enable_ack(SMBUS_NAME);
 }
 
 
@@ -104,6 +106,7 @@ void smbus_write_word(uint8_t device_address, uint8_t reg_address,
 uint16_t smbus_read_word(uint8_t device_address, uint8_t reg_address) {
 	uint32_t reg32 __attribute__((unused));
 	uint16_t res = 0;
+	uint32_t i = 0;
 	i2c_send_start(SMBUS_NAME);
 	while (!((I2C_SR1(SMBUS_NAME) & I2C_SR1_SB)
 	         & (I2C_SR2(SMBUS_NAME) & (I2C_SR2_MSL | I2C_SR2_BUSY))));
@@ -119,7 +122,7 @@ uint16_t smbus_read_word(uint8_t device_address, uint8_t reg_address) {
 	while (!((I2C_SR1(SMBUS_NAME) & I2C_SR1_SB)
 	         & (I2C_SR2(SMBUS_NAME) & (I2C_SR2_MSL | I2C_SR2_BUSY))));
 
-	i2c_send_7bit_address(SMBUS_NAME, device_address, I2C_WRITE);
+	i2c_send_7bit_address(SMBUS_NAME, device_address, I2C_READ);
 	while (!(I2C_SR1(SMBUS_NAME) & I2C_SR1_ADDR));
 
 	reg32 = I2C_SR2(SMBUS_NAME);
@@ -134,6 +137,8 @@ uint16_t smbus_read_word(uint8_t device_address, uint8_t reg_address) {
 	uint8_t pec = I2C_DR(SMBUS_NAME);
 
 	i2c_send_stop(SMBUS_NAME);
+
+	return res;
 }
 
 
