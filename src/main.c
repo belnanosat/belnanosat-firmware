@@ -455,7 +455,6 @@ int main(void) {
 	uint32_t habduino_packet_id = 0;
 	uint8_t checksum;
 	while (1) {
-
 		/* iwdg_reset(); */
 		process_bmp180(&bmp180_sensor, &packet);
 		process_ds18b20(&ds18b20_bus, &packet);
@@ -508,13 +507,17 @@ int main(void) {
 			}
 			buffer1[stream.bytes_written] = checksum;
 
-			stuff_data(buffer1, stream.bytes_written + 1, buffer2);
+			uint32_t len = stuff_data(buffer1, stream.bytes_written + 1, buffer2);
 
 #ifdef LOG_TO_EEPROM
 			EEPROM_write(&eeprom, buffer2, stream.bytes_written);
 #endif
 
-			log_write(buffer2, stream.bytes_written + 3);
+			log_write(buffer2, len);
+
+			for (i = 0; i < len; ++i) {
+				usart_send_blocking(USART2_ID, buffer2[i]);
+			}
 
 			last_packet_time = get_time_ms();
 
