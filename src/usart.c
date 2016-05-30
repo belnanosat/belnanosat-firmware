@@ -37,6 +37,7 @@ extern int _read(int file, char *buf, int len);
  * RX - PA3, TX - PA2 - works!
  * USART3 pins:
  * RX - PB11, TX - PB10 - works!
+ * RX - PC11, TX - PC10 - works!
  */
 
 void usart1_setup(void) {
