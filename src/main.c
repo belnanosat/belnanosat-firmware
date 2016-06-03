@@ -149,7 +149,6 @@ static void process_mpu6050(TelemetryPacket *packet) {
 
 	int16_t ax, ay, az, gx, gy, gz;
 	MPU6050_getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
-
 	packet->has_acceleration_x = true;
 	packet->has_acceleration_y = true;
 	packet->has_acceleration_z = true;
@@ -224,11 +223,11 @@ static void process_bh1750(BH1750 *sensor, TelemetryPacket *packet) {
 	packet->has_sun_sensor1 = true;
 	packet->has_sun_sensor2 = true;
 	packet->has_sun_sensor3 = true;
-//	packet->has_sun_sensor4 = true;
+	packet->has_sun_sensor4 = true;
 	packet->sun_sensor1 = bh1750_read(sensor, 0);
-	packet->sun_sensor2 = bh1750_read(sensor, 2);
-	packet->sun_sensor3 = bh1750_read(sensor, 3);
-//	packet->sun_sensor4 = bh1750_read(sensor, 3);
+	packet->sun_sensor2 = bh1750_read(sensor, 1);
+	packet->sun_sensor3 = bh1750_read(sensor, 2);
+	packet->sun_sensor4 = bh1750_read(sensor, 3);
 
 	sensor->conv_start_time = get_time_ms();
 }
@@ -401,7 +400,7 @@ int main(void) {
 	gpio_setup();
 	systick_setup();
 	usart1_setup();
-//	usart2_setup();
+	usart2_setup();
 	spi_setup();
 	sdcard_setup();
 	radiation_sensor_setup();
@@ -431,7 +430,7 @@ int main(void) {
 	gz_offset >>= 5;
 
 	bmp180_setup(&bmp180_sensor, I2C2, BMP180_MODE_ULTRA_HIGHRES);
-//	bh1750_setup(&bh1750, I2C3);
+	bh1750_setup(&bh1750, I2C3);
 //	EEPROM_setup(&eeprom, I2C2);
 
 /* 	iwdg_set_period_ms(2000); */
@@ -462,7 +461,7 @@ int main(void) {
 		process_hmc5883l(&packet);
 		process_madgwick(&packet);
 		process_adc(&packet);
-/* 		process_bh1750(&bh1750, &packet); */
+		process_bh1750(&bh1750, &packet);
 		process_gps(&packet);
 		process_radiation_sensor(&packet);
 		process_mlx90614(&packet);
