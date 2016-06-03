@@ -73,19 +73,7 @@ bool has_read_mpu6050 = false;
 bool has_read_hmc5883l = false;
 int16_t gx_offset = 0, gy_offset = 0, gz_offset = 0;
 
-uint32_t last_mpu6050_conversion;
-uint32_t last_hmc5883l_conversion;
-uint32_t last_madgwick;
-uint32_t last_adc_read;
-uint32_t last_mlx90614_conversion;
-
 static uint16_t adc_data[3];
-static uint32_t ozone_sensor = 0;
-static uint32_t ozone_sensor_num = 0;
-static uint32_t uv_light_sensor = 0;
-static uint32_t uv_light_sensor_num = 0;
-static uint32_t temperature_sensor = 0;
-static uint32_t temperature_sensor_num = 0;
 static uint8_t adc_channel_ids[] = {ADC_CHANNEL10, ADC_CHANNEL11, ADC_CHANNEL16};
 static adc_channel adc_channels[] = {
 	{.rcc_port = RCC_GPIOC, .gpio_port = GPIOC, .gpio = GPIO0},
@@ -139,9 +127,6 @@ int main(void) {
 	mlx90614_setup();
 	MPU6050_initialize();
 	HMC5883L_Init();
-	last_mpu6050_conversion = get_time_ms();
-	last_hmc5883l_conversion = get_time_ms();
-	last_madgwick = get_time_ms();
 	// Init Gyroscope offsets
 	uint32_t i;
 	for(i = 0; i < 32; i ++) {
@@ -314,7 +299,8 @@ static void process_bmp180(BMP180 *sensor, TelemetryPacket *packet) {
 }
 
 static void process_mpu6050(TelemetryPacket *packet) {
-	if (get_time_since_ms(last_mpu6050_conversion) < 10) return;
+	static uint64_t last_conversion = 0;
+	if (get_time_since_ms(last_conversion) < 10) return;
 
 	int16_t ax, ay, az, gx, gy, gz;
 	MPU6050_getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
@@ -342,12 +328,13 @@ static void process_mpu6050(TelemetryPacket *packet) {
 	fgy = gy / ratio;
 	fgz = gz / ratio;
 
-	last_mpu6050_conversion = get_time_ms();
+	last_conversion = get_time_ms();
 	has_read_mpu6050 = true;
 }
 
 static void process_hmc5883l(TelemetryPacket *packet) {
-	if (get_time_since_ms(last_hmc5883l_conversion) < 20) return;
+	static uint64_t last_conversion = 0;
+	if (get_time_since_ms(last_conversion) < 20) return;
 
 	int16_t mx, my, mz;
 	HMC5883L_GetHeading(&mx, &my, &mz);
@@ -365,12 +352,13 @@ static void process_hmc5883l(TelemetryPacket *packet) {
 	fmy = my * mratio;
 	fmz = mz * mratio;
 
-	last_hmc5883l_conversion = get_time_ms();
+	last_conversion = get_time_ms();
 	has_read_hmc5883l = true;
 }
 
 static void process_madgwick(TelemetryPacket *packet) {
-	if (get_time_since_ms(last_madgwick) < 10) return;
+	static uint64_t last_update = 0;
+	if (get_time_since_ms(last_update) < 10) return;
 
 	if (!has_read_mpu6050 || !has_read_hmc5883l) return;
 
@@ -384,6 +372,8 @@ static void process_madgwick(TelemetryPacket *packet) {
 	packet->quaternion1 = q1;
 	packet->quaternion2 = q2;
 	packet->quaternion3 = q3;
+
+	last_update = get_time_ms();
 }
 
 static void process_bh1750(BH1750 *sensor, TelemetryPacket *packet) {
@@ -402,6 +392,15 @@ static void process_bh1750(BH1750 *sensor, TelemetryPacket *packet) {
 }
 
 static void process_adc(TelemetryPacket *packet) {
+	static uint64_t last_adc_read = 0;
+
+	static uint32_t ozone_sensor = 0;
+	static uint32_t ozone_sensor_num = 0;
+	static uint32_t uv_light_sensor = 0;
+	static uint32_t uv_light_sensor_num = 0;
+	static uint32_t temperature_sensor = 0;
+	static uint32_t temperature_sensor_num = 0;
+
 	uv_light_sensor += adc_data[0];
 	ozone_sensor += adc_data[1];
 	temperature_sensor += adc_data[2];
@@ -467,8 +466,9 @@ static void process_radiation_sensor(TelemetryPacket *packet) {
 }
 
 static void process_mlx90614(TelemetryPacket *packet) {
+	static uint64_t last_conversion = 0;
 	// TODO: find out exact delay between conversions
-	if (get_time_since_ms(last_mlx90614_conversion) < 500) return;
+	if (get_time_since_ms(last_conversion) < 500) return;
 
 	packet->mlx90614_ambient_temperature = mlx90614_read_ambient_temp();
 	packet->has_mlx90614_ambient_temperature = true;
@@ -476,7 +476,7 @@ static void process_mlx90614(TelemetryPacket *packet) {
 	packet->mlx90614_object_temperature = mlx90614_read_object_temp();
 	packet->has_mlx90614_object_temperature = true;
 
-	last_mlx90614_conversion = get_time_ms();
+	last_conversion = get_time_ms();
 }
 
 static void mask_packet_fields(TelemetryPacket *packet) {
