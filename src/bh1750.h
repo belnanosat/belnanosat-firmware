@@ -37,7 +37,6 @@
 
 typedef struct {
 	uint32_t i2c;
-	uint32_t conv_start_time;
 	uint8_t mode;
 
 	uint16_t illumination[4];
@@ -45,6 +44,5 @@ typedef struct {
 
 extern void bh1750_setup(BH1750 *sensor, uint32_t i2c);
 extern uint16_t bh1750_read(BH1750 *sensor, int id);
-extern bool bh1750_is_conversion_finished(BH1750 *sensor);
 
 #endif

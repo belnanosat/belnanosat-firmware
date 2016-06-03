@@ -34,6 +34,7 @@
 
 #include "proto/telemetry.pb.h"
 
+#include "config.h"
 #include "usart.h"
 #include "adc.h"
 #include "i2c.h"
@@ -65,7 +66,6 @@
 
 
 //#define LOG_TO_EEPROM
-#define PACKET_DELAY_MS 100
 
 float fax, fay, faz, fgx, fgy, fgz;
 float fmx, fmy, fmz;
@@ -202,7 +202,7 @@ int main(void) {
 		}
 
 		/* Is it time to send a packet? */
-		if (get_time_since_ms(last_packet_time) > PACKET_DELAY_MS) {
+		if (get_time_since_ms(last_packet_time) > SDCARD_PACKET_DELAY_MS) {
 			packet.packet_id = ++packet_id;
 			packet.timestamp = get_time_ms();
 			packet.status = 0xFFFFFFFF;
@@ -300,7 +300,7 @@ static void process_bmp180(BMP180 *sensor, TelemetryPacket *packet) {
 
 static void process_mpu6050(TelemetryPacket *packet) {
 	static uint64_t last_conversion = 0;
-	if (get_time_since_ms(last_conversion) < 10) return;
+	if (get_time_since_ms(last_conversion) < MPU6050_CONVERSION_DELAY_MS) return;
 
 	int16_t ax, ay, az, gx, gy, gz;
 	MPU6050_getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
@@ -334,7 +334,7 @@ static void process_mpu6050(TelemetryPacket *packet) {
 
 static void process_hmc5883l(TelemetryPacket *packet) {
 	static uint64_t last_conversion = 0;
-	if (get_time_since_ms(last_conversion) < 20) return;
+	if (get_time_since_ms(last_conversion) < HMC5883L_CONVERSION_DELAY_MS) return;
 
 	int16_t mx, my, mz;
 	HMC5883L_GetHeading(&mx, &my, &mz);
@@ -358,7 +358,7 @@ static void process_hmc5883l(TelemetryPacket *packet) {
 
 static void process_madgwick(TelemetryPacket *packet) {
 	static uint64_t last_update = 0;
-	if (get_time_since_ms(last_update) < 10) return;
+	if (get_time_since_ms(last_update) < MADGWICK_UPDATE_DELAY_MS) return;
 
 	if (!has_read_mpu6050 || !has_read_hmc5883l) return;
 
@@ -377,7 +377,8 @@ static void process_madgwick(TelemetryPacket *packet) {
 }
 
 static void process_bh1750(BH1750 *sensor, TelemetryPacket *packet) {
-	if (!bh1750_is_conversion_finished(sensor)) return;
+	static uint64_t last_conversion = 0;
+	if (get_time_since_ms(last_conversion) < BH1750_CONVERSION_DELAY_MS) return;
 
 	packet->has_sun_sensor1 = true;
 	packet->has_sun_sensor2 = true;
@@ -388,7 +389,7 @@ static void process_bh1750(BH1750 *sensor, TelemetryPacket *packet) {
 	packet->sun_sensor3 = bh1750_read(sensor, 2);
 	packet->sun_sensor4 = bh1750_read(sensor, 3);
 
-	sensor->conv_start_time = get_time_ms();
+	last_conversion = get_time_ms();
 }
 
 static void process_adc(TelemetryPacket *packet) {
@@ -408,7 +409,7 @@ static void process_adc(TelemetryPacket *packet) {
 	++uv_light_sensor_num;
 	++temperature_sensor_num;
 
-	if (get_time_since_ms(last_adc_read) < 300) return;
+	if (get_time_since_ms(last_adc_read) < ADC_CONVERSION_DELAY_MS) return;
 
 	packet->has_ozone = true;
 	packet->ozone = (float)ozone_sensor / ozone_sensor_num;
@@ -468,7 +469,7 @@ static void process_radiation_sensor(TelemetryPacket *packet) {
 static void process_mlx90614(TelemetryPacket *packet) {
 	static uint64_t last_conversion = 0;
 	// TODO: find out exact delay between conversions
-	if (get_time_since_ms(last_conversion) < 500) return;
+	if (get_time_since_ms(last_conversion) < MLX90614_CONVERSION_DELAY_MS) return;
 
 	packet->mlx90614_ambient_temperature = mlx90614_read_ambient_temp();
 	packet->has_mlx90614_ambient_temperature = true;
