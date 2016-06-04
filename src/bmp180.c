@@ -17,6 +17,7 @@
  * along with belnanosat.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "bmp180_fileid.h"
 #include "bmp180.h"
 
 #include <assert.h>

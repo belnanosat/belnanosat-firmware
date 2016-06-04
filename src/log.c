@@ -17,6 +17,7 @@
  * along with belnanosat.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "log_fileid.h"
 #include "log.h"
 
 #include <stdio.h>

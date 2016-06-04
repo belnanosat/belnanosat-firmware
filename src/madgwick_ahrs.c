@@ -15,6 +15,7 @@
 //---------------------------------------------------------------------------------------------------
 // Header files
 
+#include "madgwick_ahrs_fileid.h"
 #include "madgwick_ahrs.h"
 #include <math.h>
 

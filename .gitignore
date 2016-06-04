@@ -4,6 +4,7 @@
 *.d
 *.map
 *.pb*
+*_fileid.h
 # Binary files    #
 ###################
 *.elf

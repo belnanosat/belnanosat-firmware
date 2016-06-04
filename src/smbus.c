@@ -17,6 +17,7 @@
  * along with belnanosat.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "smbus_fileid.h"
 #include "smbus.h"
 
 #include <libopencm3/stm32/gpio.h>

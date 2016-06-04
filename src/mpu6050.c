@@ -35,6 +35,7 @@ THE SOFTWARE.
 ===============================================
 */
 
+#include "mpu6050_fileid.h"
 #include "mpu6050.h"
 
 #include <stdlib.h>

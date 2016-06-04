@@ -17,6 +17,7 @@
  * along with belnanosat.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "usart_fileid.h"
 #include "usart.h"
 
 #include <errno.h>

@@ -27,6 +27,8 @@
  THE SOFTWARE.
  ================================================================================================
  */
+
+#include "hmc5883l_fileid.h"
 #include "hmc5883l.h"
 
 #include <libopencm3/stm32/i2c.h>

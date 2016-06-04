@@ -17,6 +17,7 @@
  * along with belnanosat.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "ds18b20_fileid.h"
 #include "ds18b20.h"
 
 #include <string.h>

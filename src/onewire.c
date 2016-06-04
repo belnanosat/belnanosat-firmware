@@ -16,6 +16,8 @@
  * | along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * |----------------------------------------------------------------------
  */
+
+#include "onewire_fileid.h"
 #include "onewire.h"
 
 void OneWire_Init(OneWire_t* OneWireStruct, uint32_t gpio_port, uint16_t gpio_pin) {

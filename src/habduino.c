@@ -17,6 +17,7 @@
  * along with belnanosat.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "habduino_fileid.h"
 #include "habduino.h"
 
 #include <libopencm3/stm32/gpio.h>
