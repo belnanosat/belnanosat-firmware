@@ -17,7 +17,6 @@
  * along with belnanosat.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "eeprom_fileid.h"
 #include "eeprom.h"
 
 #include <stdio.h>

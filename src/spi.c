@@ -17,7 +17,6 @@
  * along with belnanosat.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "spi_fileid.h"
 #include "spi.h"
 
 #include <libopencm3/stm32/rcc.h>

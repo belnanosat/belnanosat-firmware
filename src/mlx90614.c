@@ -17,7 +17,6 @@
  * along with belnanosat.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "mlx90614_fileid.h"
 #include "mlx90614.h"
 
 #include <stdio.h>

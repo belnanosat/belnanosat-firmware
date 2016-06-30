@@ -17,7 +17,6 @@
  * along with belnanosat.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "sdcard_fileid.h"
 #include "sdcard.h"
 
 #include <stdio.h>

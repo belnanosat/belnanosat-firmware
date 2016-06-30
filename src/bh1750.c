@@ -17,7 +17,6 @@
  * along with belnanosat.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "bh1750_fileid.h"
 #include "bh1750.h"
 
 #include <libopencm3/stm32/rcc.h>

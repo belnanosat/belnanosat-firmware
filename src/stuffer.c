@@ -17,7 +17,6 @@
  * along with belnanosat.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "stuffer_fileid.h"
 #include "stuffer.h"
 
 int unstuff_data(uint8_t *input_data, int length, uint8_t *output_data) {

@@ -30,7 +30,7 @@ extern uint32_t status_stack_frames[STATUS_MAX_STACK_FRAMES];
 #define PUSH_STACK_FRAME(error_code) do{	  \
 		if (status_stack_frame_id + 1 < (STATUS_MAX_STACK_FRAMES)) { \
 			status_stack_frames[status_stack_frame_id++] =\
-				__LINE__ | (FILE_ID << 16) | (error_code << 24); \
+				__LINE__ | (error_code << 24); \
 		}\
 	} while (0)
 

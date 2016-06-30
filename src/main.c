@@ -17,8 +17,6 @@
  * along with belnanosat.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "main_fileid.h"
-
 #include <stdio.h>
 #include <math.h>
 

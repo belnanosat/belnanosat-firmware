@@ -17,7 +17,6 @@
  * along with belnanosat.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "adc_fileid.h"
 #include "adc.h"
 
 #include <libopencm3/stm32/rcc.h>

@@ -17,7 +17,6 @@
  * along with belnanosat.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "radiation_sensor_fileid.h"
 #include "radiation_sensor.h"
 
 #include <stdbool.h>
