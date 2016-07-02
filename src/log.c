@@ -56,3 +56,16 @@ void log_write(const uint8_t* data, uint32_t len) {
 		memcpy(buff, data + len - cur_block_shift, cur_block_shift);
 	}
 }
+
+void log_clear(void) {
+	gpio_clear(GPIOD, GPIO15);
+	uint32_t i;
+	for (i = 0; i < 512; ++i) {
+		buff[i] = 0;
+	}
+	for (i = 0; i < 1024 * 20; ++i) {
+		sdcard_single_block_write(cur_block_id + i, buff);
+		sdcard2_single_block_write(cur_block_id2 + i, buff);
+	}
+	gpio_set(GPIOD, GPIO15);
+}

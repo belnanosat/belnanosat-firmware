@@ -25,5 +25,6 @@
 
 extern void log_setup(void);
 extern void log_write(const uint8_t* data, uint32_t len);
+extern void log_clear(void);
 
 #endif
