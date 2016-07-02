@@ -127,7 +127,7 @@ int main(void) {
 	radiation_sensor_setup();
 //	CHECK_SETUP(sdcard);
 	log_setup();
-	adc_setup(adc_channels, adc_channel_ids, adc_data, 3);
+	adc_setup(adc_channels, adc_channel_ids, adc_data, 4);
 	i2c_setup();
 	smbus_setup();
 	msleep(3000);
@@ -154,9 +154,7 @@ int main(void) {
 /* 	iwdg_set_period_ms(2000); */
 /* 	iwdg_start(); */
 
-	/* Set two LEDs for wigwag effect when toggling. */
-	gpio_set(GPIOD, GPIO12);
-	gpio_clear(GPIOD, GPIO15);
+	gpio_clear(GPIOC, GPIO3);
 
 	static uint8_t buffer1[512];
 	static uint8_t buffer2[512];
@@ -259,13 +257,13 @@ static void systick_setup(void) {
 
 static void clock_setup(void) {
 	rcc_clock_setup_hse_3v3(&rcc_hse_8mhz_3v3[RCC_CLOCK_3V3_168MHZ]);
-
-	rcc_periph_clock_enable(RCC_GPIOD);
 }
 
 static void gpio_setup(void) {
 	/* Set GPIO11-15 (in GPIO port D) to 'output push-pull'. */
-	gpio_mode_setup(GPIOD, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO12 | GPIO15);
+	rcc_periph_clock_enable(RCC_GPIOC);
+	rcc_periph_clock_enable(RCC_GPIOD);
+	gpio_mode_setup(GPIOC, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO3);
 }
 
 static void process_ds18b20(DS18B20Bus *bus, TelemetryPacket *packet) {
@@ -411,12 +409,16 @@ static void process_adc(TelemetryPacket *packet) {
 	static uint32_t uv_light_sensor_num = 0;
 	static uint32_t temperature_sensor = 0;
 	static uint32_t temperature_sensor_num = 0;
+	static uint32_t voltage_sensor = 0;
+	static uint32_t voltage_sensor_num = 0;
 
 	uv_light_sensor += adc_data[0];
 	ozone_sensor += adc_data[1];
-	temperature_sensor += adc_data[2];
+	voltage_sensor += adc_data[2];
+	temperature_sensor += adc_data[3];
 	++ozone_sensor_num;
 	++uv_light_sensor_num;
+	++voltage_sensor_num;
 	++temperature_sensor_num;
 
 	if (get_time_since_ms(last_adc_read) < ADC_CONVERSION_DELAY_MS) return;
@@ -430,11 +432,16 @@ static void process_adc(TelemetryPacket *packet) {
 	packet->has_cpu_temperature = true;
 	packet->cpu_temperature = (float)temperature_sensor / temperature_sensor_num;
 
+	packet->has_voltage = true;
+	packet->voltage = voltage_sensor;
+
 	ozone_sensor = 0;
 	uv_light_sensor = 0;
+	voltage_sensor = 0;
 	temperature_sensor = 0;
 	ozone_sensor_num = 0;
 	uv_light_sensor_num = 0;
+	voltage_sensor_num = 0;
 	temperature_sensor_num = 0;
 
 	last_adc_read = get_time_ms();

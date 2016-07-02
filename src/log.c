@@ -43,7 +43,7 @@ void log_write(const uint8_t* data, uint32_t len) {
 		memcpy(buff + cur_block_shift, data, len);
 		cur_block_shift += len;
 	} else {
-		gpio_toggle(GPIOD, GPIO15);
+		gpio_toggle(GPIOC, GPIO3);
 
 		memcpy(buff + cur_block_shift, data, 512 - cur_block_shift);
 		sdcard_single_block_write(cur_block_id, buff);
@@ -58,14 +58,14 @@ void log_write(const uint8_t* data, uint32_t len) {
 }
 
 void log_clear(void) {
-	gpio_clear(GPIOD, GPIO15);
+	gpio_clear(GPIOC, GPIO3);
 	uint32_t i;
 	for (i = 0; i < 512; ++i) {
 		buff[i] = 0;
 	}
-	for (i = 0; i < 1024 * 20; ++i) {
+	for (i = 0; i < 1024 * 100; ++i) {
 		sdcard_single_block_write(cur_block_id + i, buff);
-		sdcard2_single_block_write(cur_block_id2 + i, buff);
+//		sdcard2_single_block_write(cur_block_id2 + i, buff);
 	}
-	gpio_set(GPIOD, GPIO15);
+	gpio_set(GPIOC, GPIO3);
 }
