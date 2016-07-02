@@ -34,6 +34,7 @@
 
 #include "proto/telemetry.pb.h"
 
+#include "camera.h"
 #include "config.h"
 #include "usart.h"
 #include "adc.h"
@@ -111,6 +112,8 @@ int main(void) {
 	BH1750 bh1750;
 	clock_setup();
 	gpio_setup();
+	camera_setup();
+	camera_power(1);
 	systick_setup();
 	usart1_setup();
 	usart2_setup();
@@ -122,7 +125,7 @@ int main(void) {
 	adc_setup(adc_channels, adc_channel_ids, adc_data, 3);
 	i2c_setup();
 	smbus_setup();
-	msleep(1000);
+	msleep(3000);
 
 	mlx90614_setup();
 	MPU6050_initialize();
@@ -163,6 +166,8 @@ int main(void) {
 	uint32_t packet_id = 0;
 	uint32_t habduino_packet_id = 0;
 	uint8_t checksum;
+
+	camera_start_video();
 	while (1) {
 		/* iwdg_reset(); */
 		process_bmp180(&bmp180_sensor, &packet);

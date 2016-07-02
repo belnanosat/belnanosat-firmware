@@ -7,6 +7,7 @@ LDSCRIPT = stm32f407vet6.ld
 
 OBJS += usart.o
 OBJS += adc.o
+OBJS += camera.o
 OBJS += i2c.o
 OBJS += bmp180.o
 OBJS += eeprom.o
