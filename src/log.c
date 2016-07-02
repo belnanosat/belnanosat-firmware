@@ -25,11 +25,13 @@
 #include <libopencm3/stm32/gpio.h>
 
 #include "sdcard.h"
+#include "sdcard2.h"
 
 static uint8_t buff[512];
 
 static uint32_t cur_block_id = 0x7740;
 static uint32_t cur_block_shift = 0;
+static uint32_t cur_block_id2 = 16640;
 
 // TODO: search for a place to append log. We don't want to override
 // existing datax
@@ -45,8 +47,10 @@ void log_write(const uint8_t* data, uint32_t len) {
 
 		memcpy(buff + cur_block_shift, data, 512 - cur_block_shift);
 		sdcard_single_block_write(cur_block_id, buff);
+		sdcard2_single_block_write(cur_block_id2, buff);
 
 		++cur_block_id;
+		++cur_block_id2;
 		memset(buff, 0, 512);
 		cur_block_shift = len - (512 - cur_block_shift);
 		memcpy(buff, data + len - cur_block_shift, cur_block_shift);

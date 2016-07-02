@@ -50,7 +50,9 @@
 #include "bh1750.h"
 #include "madgwick_ahrs.h"
 #include "spi.h"
+#include "spi2.h"
 #include "sdcard.h"
+#include "sdcard2.h"
 #include "log.h"
 #include "stuffer.h"
 #include "radiation_sensor.h"
@@ -119,6 +121,8 @@ int main(void) {
 	usart2_setup();
 	spi_setup();
 	sdcard_setup();
+	spi2_setup();
+	sdcard2_setup();
 	radiation_sensor_setup();
 //	CHECK_SETUP(sdcard);
 	log_setup();
