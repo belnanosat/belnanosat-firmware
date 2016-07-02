@@ -76,11 +76,12 @@ bool has_read_mpu6050 = false;
 bool has_read_hmc5883l = false;
 int16_t gx_offset = 0, gy_offset = 0, gz_offset = 0;
 
-static uint16_t adc_data[3];
-static uint8_t adc_channel_ids[] = {ADC_CHANNEL10, ADC_CHANNEL11, ADC_CHANNEL16};
+static uint16_t adc_data[4];
+static uint8_t adc_channel_ids[] = {ADC_CHANNEL10, ADC_CHANNEL11, ADC_CHANNEL12, ADC_CHANNEL16};
 static adc_channel adc_channels[] = {
 	{.rcc_port = RCC_GPIOC, .gpio_port = GPIOC, .gpio = GPIO0},
 	{.rcc_port = RCC_GPIOC, .gpio_port = GPIOC, .gpio = GPIO1},
+	{.rcc_port = RCC_GPIOC, .gpio_port = GPIOC, .gpio = GPIO2},
 	{.rcc_port = 0, .gpio_port = 0, .gpio = 0},
 };
 
