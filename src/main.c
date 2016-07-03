@@ -115,24 +115,24 @@ int main(void) {
 	BH1750 bh1750;
 	clock_setup();
 	gpio_setup();
-	camera_setup();
-	camera_power(1);
 	systick_setup();
+	camera_setup();
 	usart1_setup();
 	usart2_setup();
 	spi_setup();
 	sdcard_setup();
-	spi2_setup();
-	sdcard2_setup();
+	/* spi2_setup(); */
+	/* sdcard2_setup(); */
 	radiation_sensor_setup();
 //	CHECK_SETUP(sdcard);
 	log_setup();
 	adc_setup(adc_channels, adc_channel_ids, adc_data, 4);
 	i2c_setup();
 	smbus_setup();
-	msleep(3000);
+	msleep(5000);
 
-	mlx90614_setup();
+	camera_power(1);
+//	mlx90614_setup();
 	MPU6050_initialize();
 	HMC5883L_Init();
 	// Init Gyroscope offsets
@@ -182,7 +182,7 @@ int main(void) {
 		process_bh1750(&bh1750, &packet);
 		process_gps(&packet);
 		process_radiation_sensor(&packet);
-		process_mlx90614(&packet);
+//		process_mlx90614(&packet);
 
 		if (habduino_has_pending_packet_request) {
 			packet.packet_id = habduino_packet_id;
@@ -433,7 +433,7 @@ static void process_adc(TelemetryPacket *packet) {
 	packet->cpu_temperature = (float)temperature_sensor / temperature_sensor_num;
 
 	packet->has_voltage = true;
-	packet->voltage = voltage_sensor;
+	packet->voltage = voltage_sensor / voltage_sensor_num;
 
 	ozone_sensor = 0;
 	uv_light_sensor = 0;

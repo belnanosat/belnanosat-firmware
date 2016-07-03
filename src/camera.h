@@ -25,7 +25,7 @@
 #define CAMERA_GPIO_RCC GPIOE_RCC
 #define CAMERA_GPIO_PORT GPIOE
 #define CAMERA_GPIO_PIN GPIO5
-#define CAMERA_GPIO_PIN2 GPIO1
+#define CAMERA_GPIO_PIN2 GPIO4
 
 extern void camera_setup(void);
 extern void camera_power(uint8_t state);
