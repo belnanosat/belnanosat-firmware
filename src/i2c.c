@@ -25,6 +25,7 @@
 #include <libopencm3/stm32/i2c.h>
 #include <libopencm3/stm32/gpio.h>
 
+#define I2C_TIMEOUT 10000
 
 /*
  * I2C1 pins:
@@ -85,13 +86,16 @@ void i2c_setup(void) {
 void i2c_write_byte(uint32_t i2c, uint8_t device_address,
                     uint8_t reg_address, uint8_t value) {
 	uint32_t reg32 __attribute__((unused));
+	uint32_t i;
 
 	i2c_send_start(i2c);
 	while (!((I2C_SR1(i2c) & I2C_SR1_SB)
 	         & (I2C_SR2(i2c) & (I2C_SR2_MSL | I2C_SR2_BUSY))));
 
 	i2c_send_7bit_address(i2c, device_address, I2C_WRITE);
-	while (!(I2C_SR1(i2c) & I2C_SR1_ADDR));
+	i = 0;
+	while (!(I2C_SR1(i2c) & I2C_SR1_ADDR) && i < I2C_TIMEOUT) ++i;
+	if (i == I2C_TIMEOUT) return;
 
 	reg32 = I2C_SR2(i2c);
 	i2c_send_data(i2c, reg_address);
@@ -114,13 +118,16 @@ void i2c_write_word(uint32_t i2c, uint8_t device_address,
 uint8_t i2c_read_byte(uint32_t i2c, uint8_t device_address, uint8_t reg_address) {
 	uint32_t reg32 __attribute__((unused));
 	volatile uint8_t res;
+	uint32_t i;
 
 	i2c_send_start(i2c);
 	while (!((I2C_SR1(i2c) & I2C_SR1_SB)
 	         & (I2C_SR2(i2c) & (I2C_SR2_MSL | I2C_SR2_BUSY))));
 
 	i2c_send_7bit_address(i2c, device_address, I2C_WRITE);
-	while (!(I2C_SR1(i2c) & I2C_SR1_ADDR));
+	i = 0;
+	while (!(I2C_SR1(i2c) & I2C_SR1_ADDR) && i < I2C_TIMEOUT) ++i;
+	if (i == I2C_TIMEOUT) return 0;
 
 	reg32 = I2C_SR2(i2c);
 	i2c_send_data(i2c, reg_address);
@@ -196,6 +203,7 @@ uint16_t i2c_read_word(uint32_t i2c, uint8_t device_address,
                        uint8_t reg_address) {
 	uint32_t reg32 __attribute__((unused));
 	uint16_t res;
+	uint32_t i;
 
 	while (I2C_SR2(i2c) & I2C_SR2_BUSY);
 
@@ -205,7 +213,9 @@ uint16_t i2c_read_word(uint32_t i2c, uint8_t device_address,
 
 
 	i2c_send_7bit_address(i2c, device_address, I2C_WRITE);
-	while (!(I2C_SR1(i2c) & I2C_SR1_ADDR));
+	i = 0;
+	while (!(I2C_SR1(i2c) & I2C_SR1_ADDR) && i < I2C_TIMEOUT) ++i;
+	if (i == I2C_TIMEOUT) return 0;
 
 	reg32 = I2C_SR2(i2c);
 	i2c_send_data(i2c, reg_address);
@@ -247,7 +257,9 @@ void i2c_read_sequence(uint32_t i2c, uint8_t device_address,
 
 
 	i2c_send_7bit_address(i2c, device_address, I2C_WRITE);
-	while (!(I2C_SR1(i2c) & I2C_SR1_ADDR));
+	i = 0;
+	while (!(I2C_SR1(i2c) & I2C_SR1_ADDR) && i < I2C_TIMEOUT) ++i;
+	if (i == I2C_TIMEOUT) return;
 
 	reg32 = I2C_SR2(i2c);
 	// Send MSB
@@ -290,7 +302,9 @@ void i2c_write_sequence(uint32_t i2c, uint8_t device_address,
 	         & (I2C_SR2(i2c) & (I2C_SR2_MSL | I2C_SR2_BUSY))));
 
 	i2c_send_7bit_address(i2c, device_address, I2C_WRITE);
-	while (!(I2C_SR1(i2c) & I2C_SR1_ADDR));
+	i = 0;
+	while (!(I2C_SR1(i2c) & I2C_SR1_ADDR) && i < I2C_TIMEOUT) ++i;
+	if (i == I2C_TIMEOUT) return;
 
 	reg32 = I2C_SR2(i2c);
 
@@ -311,15 +325,18 @@ void i2c_write_sequence(uint32_t i2c, uint8_t device_address,
 
 uint8_t i2c_wread_byte(uint32_t i2c, uint8_t device_address,
                        uint16_t reg_address) {
-		uint32_t reg32 __attribute__((unused));
+	uint32_t reg32 __attribute__((unused));
 	volatile uint8_t res;
+	uint32_t i;
 
 	i2c_send_start(i2c);
 	while (!((I2C_SR1(i2c) & I2C_SR1_SB)
 	         & (I2C_SR2(i2c) & (I2C_SR2_MSL | I2C_SR2_BUSY))));
 
 	i2c_send_7bit_address(i2c, device_address, I2C_WRITE);
-	while (!(I2C_SR1(i2c) & I2C_SR1_ADDR));
+	i = 0;
+	while (!(I2C_SR1(i2c) & I2C_SR1_ADDR) && i < I2C_TIMEOUT) ++i;
+	if (i == I2C_TIMEOUT) return 0;
 
 	reg32 = I2C_SR2(i2c);
 
@@ -349,13 +366,16 @@ uint8_t i2c_wread_byte(uint32_t i2c, uint8_t device_address,
 
 void i2c_write_byte_raw(uint32_t i2c, uint8_t device_address, uint8_t data) {
 	uint32_t reg32 __attribute__((unused));
+	uint32_t i;
 
 	i2c_send_start(i2c);
 	while (!((I2C_SR1(i2c) & I2C_SR1_SB)
 	         & (I2C_SR2(i2c) & (I2C_SR2_MSL | I2C_SR2_BUSY))));
 
 	i2c_send_7bit_address(i2c, device_address, I2C_WRITE);
-	while (!(I2C_SR1(i2c) & I2C_SR1_ADDR));
+	i = 0;
+	while (!(I2C_SR1(i2c) & I2C_SR1_ADDR) && i < I2C_TIMEOUT) ++i;
+	if (i == I2C_TIMEOUT) return;
 
 	reg32 = I2C_SR2(i2c);
 	i2c_send_data(i2c, data);
@@ -367,13 +387,16 @@ void i2c_write_byte_raw(uint32_t i2c, uint8_t device_address, uint8_t data) {
 uint16_t i2c_read_word_raw(uint32_t i2c, uint8_t device_address) {
 	uint32_t reg32 __attribute__((unused));
 	volatile uint16_t res;
+	uint32_t i;
 
 	i2c_send_start(i2c);
 	while (!((I2C_SR1(i2c) & I2C_SR1_SB)
 	         & (I2C_SR2(i2c) & (I2C_SR2_MSL | I2C_SR2_BUSY))));
 
 	i2c_send_7bit_address(i2c, device_address, I2C_READ);
-	while (!(I2C_SR1(i2c) & I2C_SR1_ADDR));
+	i = 0;
+	while (!(I2C_SR1(i2c) & I2C_SR1_ADDR) && i < I2C_TIMEOUT) ++i;
+	if (i == I2C_TIMEOUT) return 0;
 
 	reg32 = I2C_SR2(i2c);
 
