@@ -23,7 +23,6 @@ OBJS += spi.o
 OBJS += spi2.o
 OBJS += sdcard.o
 OBJS += sdcard2.o
-OBJS += status.o
 OBJS += stuffer.o
 OBJS += log.o
 OBJS += radiation_sensor.o
