@@ -49,19 +49,22 @@ uint8_t ds18b20_setup(DS18B20Bus *bus, uint32_t gpio_port, uint16_t gpio_pin,
 	devices = OneWire_First(&bus->one_wire);
 	bus->devices_num = 0;
 	bus->resolution = resolution;
+	int cur_id = 0;
 	while (devices) {
 		bus->devices_num++;
 		OneWire_GetFullROM(&bus->one_wire, tmp_rom);
 		// Is it a known device?
-		bool is_found = false;
-		for (i = 0; i < 4; ++i) {
-			if (!memcmp(devices_map[i], tmp_rom, 8)) {
-				bus->devices[i].is_present = true;
-				memmove(bus->devices[i].rom, tmp_rom, 8);
-				is_found = true;
-				break;
-			}
-		}
+		/* bool is_found = false; */
+		memmove(bus->devices[cur_id++].rom, tmp_rom, 8);
+		bus->devices[i].is_present = true;
+		/* for (i = 0; i < 4; ++i) { */
+		/* 	if (!memcmp(devices_map[i], tmp_rom, 8)) { */
+		/* 		bus->devices[i].is_present = true; */
+		/* 		memmove(bus->devices[i].rom, tmp_rom, 8); */
+		/* 		is_found = true; */
+		/* 		break; */
+		/* 	} */
+		/* } */
 		/* if (!is_found) { */
 		/* 	printf("Warning: unknown device serial code, ignoring it: "); */
 		/* 	for (i = 0; i < 8; ++i) { */

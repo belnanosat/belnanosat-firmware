@@ -28,8 +28,9 @@
 #include "sdcard2.h"
 
 static uint8_t buff[512];
+static uint8_t buff2[512];
 
-static uint32_t cur_block_id = 0x7740;
+static uint32_t cur_block_id = 36864;//100000;
 static uint32_t cur_block_shift = 0;
 static uint32_t cur_block_id2 = 16640;
 
@@ -39,15 +40,34 @@ void log_setup(void) {
 }
 
 void log_write(const uint8_t* data, uint32_t len) {
+	/* memset(buff, 0, 512); */
+	/* memcpy(buff, data, len); */
+	/* sdcard_single_block_write(cur_block_id, buff); */
+	/* sdcard_single_block_read(cur_block_id, buff2); */
+	/* if (!memcmp(buff, buff2, 512)) { */
+	/* 	gpio_toggle(GPIOC, GPIO3); */
+	/* } */
+	/* ++cur_block_id; */
+	/* sdcard_setup(); */
+	/* return; */
 	if (cur_block_shift + len < 512) {
 		memcpy(buff + cur_block_shift, data, len);
 		cur_block_shift += len;
 	} else {
-		gpio_toggle(GPIOC, GPIO3);
-
 		memcpy(buff + cur_block_shift, data, 512 - cur_block_shift);
+		/* sdcard_setup(); */
+		/* msleep(100); */
+//		sdcard_setup();
+//		msleep(100);
 		sdcard_single_block_write(cur_block_id, buff);
-		sdcard2_single_block_write(cur_block_id2, buff);
+		memset(buff2, 0, 512);
+		sdcard_single_block_read(cur_block_id, buff2);
+		if (!memcmp(buff, buff2, 512)) {
+			gpio_toggle(GPIOC, GPIO3);
+		}
+		sdcard_setup();
+
+//		sdcard2_single_block_write(cur_block_id, buff);
 
 		++cur_block_id;
 		++cur_block_id2;
@@ -57,15 +77,21 @@ void log_write(const uint8_t* data, uint32_t len) {
 	}
 }
 
+void log_write2(uint8_t* data, uint32_t id) {
+//	memset(data, id % 256, 512);
+	sdcard_single_block_write(cur_block_id + id, data);
+}
+
 void log_clear(void) {
 	gpio_clear(GPIOC, GPIO3);
-	uint32_t i;
-	for (i = 0; i < 512; ++i) {
-		buff[i] = 0;
+	uint32_t i, j;
+	for (j = 0; j < 512; ++j) {
+		buff[j] = 0;
 	}
 	for (i = 0; i < 1024 * 100; ++i) {
+		memset(buff, (i + 10) % 256, 512);
 		sdcard_single_block_write(cur_block_id + i, buff);
-//		sdcard2_single_block_write(cur_block_id2 + i, buff);
+ //		sdcard2_single_block_write(cur_block_id2 + i, buff);
 	}
 	gpio_set(GPIOC, GPIO3);
 }

@@ -128,7 +128,7 @@ int main(void) {
 	log_setup();
 	adc_setup(adc_channels, adc_channel_ids, adc_data, 4);
 	i2c_setup();
-	smbus_setup();
+//	smbus_setup();
 	msleep(5000);
 
 	camera_power(1);
@@ -184,10 +184,10 @@ int main(void) {
 		process_radiation_sensor(&packet);
 //		process_mlx90614(&packet);
 
-		if (habduino_has_pending_packet_request) {
-			packet.packet_id = habduino_packet_id;
-			packet.timestamp = get_time_ms();
-			packet.status = 0xFFFFFFFF;
+		/* if (habduino_has_pending_packet_request) { */
+		/* 	packet.packet_id = habduino_packet_id; */
+		/* 	packet.timestamp = get_time_ms(); */
+		/* 	packet.status = 0xFFFFFFFF; */
 
 			/* mask_packet_fields(&packet); */
 			/* pb_ostream_t stream = pb_ostream_from_buffer(buffer1, sizeof(buffer1)); */
@@ -201,13 +201,13 @@ int main(void) {
 			/* 	usart_send_blocking(USART_ID, buffer2[i]); */
 			/* } */
 
-			usart_send_blocking(USART1_ID, 10);
-			for (i = 0; i < 10; ++i) {
-				usart_send_blocking(USART1_ID, 0xFF);
-			}
+		/* 	usart_send_blocking(USART1_ID, 10); */
+		/* 	for (i = 0; i < 10; ++i) { */
+		/* 		usart_send_blocking(USART1_ID, 0xFF); */
+		/* 	} */
 
-			habduino_has_pending_packet_request = false;
-		}
+		/* 	habduino_has_pending_packet_request = false; */
+		/* } */
 
 		/* Is it time to send a packet? */
 		if (get_time_since_ms(last_packet_time) > SDCARD_PACKET_DELAY_MS) {
@@ -242,7 +242,6 @@ int main(void) {
 			packet = (TelemetryPacket)TelemetryPacket_init_zero;
 		}
 	}
-
 	return 0;
 }
 
