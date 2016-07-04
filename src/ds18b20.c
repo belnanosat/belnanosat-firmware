@@ -28,11 +28,10 @@
  * This lets us determine a short id (from 0 to 3) of each sensor.
  */
 static uint8_t devices_map[4][8] = {
-	{0x28, 0xFF, 0x5D, 0x18, 0x67, 0x14, 0x02, 0xA1},
-	/* {0x28, 0xFF, 0x43, 0x1F, 0x67, 0x14, 0x02, 0xF9}, */
-	{0x28, 0xFF, 0x36, 0x20, 0x67, 0x14, 0x02, 0x94},
-	{0x28, 0xFF, 0x6E, 0x08, 0x67, 0x14, 0x02, 0x53},
-	{0x28, 0xFF, 0x6F, 0x16, 0x67, 0x14, 0x02, 0xB3},
+	{0x28, 0xB4, 0xB9, 0xA9, 0x06, 0x00, 0x00, 0x92},
+	{0x28, 0xAE, 0x3E, 0xAB, 0x06, 0x00, 0x00, 0x9B},
+	{0x28, 0x79, 0x33, 0xAB, 0x06, 0x00, 0x00, 0x36},
+	{0x28, 0x7D, 0x23, 0xAB, 0x06, 0x00, 0x00, 0x96},
 };
 
 uint8_t ds18b20_setup(DS18B20Bus *bus, uint32_t gpio_port, uint16_t gpio_pin,
@@ -54,24 +53,22 @@ uint8_t ds18b20_setup(DS18B20Bus *bus, uint32_t gpio_port, uint16_t gpio_pin,
 		bus->devices_num++;
 		OneWire_GetFullROM(&bus->one_wire, tmp_rom);
 		// Is it a known device?
-		/* bool is_found = false; */
-		memmove(bus->devices[cur_id++].rom, tmp_rom, 8);
-		bus->devices[i].is_present = true;
-		/* for (i = 0; i < 4; ++i) { */
-		/* 	if (!memcmp(devices_map[i], tmp_rom, 8)) { */
-		/* 		bus->devices[i].is_present = true; */
-		/* 		memmove(bus->devices[i].rom, tmp_rom, 8); */
-		/* 		is_found = true; */
-		/* 		break; */
-		/* 	} */
-		/* } */
-		/* if (!is_found) { */
-		/* 	printf("Warning: unknown device serial code, ignoring it: "); */
-		/* 	for (i = 0; i < 8; ++i) { */
-		/* 		printf("0x%02X, ", tmp_rom[i]); */
-		/* 	} */
-		/* 	printf("\n\r"); */
-		/* } */
+		bool is_found = false;
+		for (i = 0; i < 4; ++i) {
+			if (!memcmp(devices_map[i], tmp_rom, 8)) {
+				bus->devices[i].is_present = true;
+				memmove(bus->devices[i].rom, tmp_rom, 8);
+				is_found = true;
+				break;
+			}
+		}
+		if (!is_found) {
+			printf("Warning: unknown device serial code, ignoring it: ");
+			for (i = 0; i < 8; ++i) {
+				printf("0x%02X, ", tmp_rom[i]);
+			}
+			printf("\n\r");
+		}
 		devices = OneWire_Next(&bus->one_wire);
 	}
 
